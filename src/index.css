@@ -408,9 +408,9 @@ All colors MUST be HSL.
   grid-template-columns: repeat(7, 1fr);
 }
 
-/* Estilos para header de recursos (nombres de empleados) */
+/* Ocultar la fila de resource headers vacía en vista Week/Day */
 .rbc-time-header-content .rbc-row.rbc-row-resource {
-  border-bottom: 2px solid hsl(var(--border));
+  display: none !important;
 }
 
 .rbc-time-header-content .rbc-header {
