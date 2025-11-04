@@ -1,6 +1,7 @@
 import { databases, DATABASE_ID, CLIENTES_COLLECTION_ID } from '@/lib/appwrite';
 import { Cliente, LipooutUserInput, HistorialCita } from '@/types';
 import { ID, Query, Models } from 'appwrite';
+import { generateSearchUnified, filterByAllWords } from '@/utils/search-helpers';
 
 // --- Funciones de Serialización para historial_citas ---
 
@@ -33,7 +34,7 @@ export type UpdateClienteInput = Partial<CreateClienteInput>;
 
 // --- Funciones de Servicio (Usadas por hooks y otros servicios) ---
 
-// OBTENER Clientes (con búsqueda usando índice fulltext de Appwrite)
+// OBTENER Clientes (con búsqueda usando índice fulltext en campo unificado)
 export const getClientesByNombre = async (searchQuery: string = ""): Promise<(Cliente & Models.Document)[]> => {
     // Si no hay búsqueda, devolver los primeros 500
     if (!searchQuery || searchQuery.trim() === "") {
@@ -45,50 +46,63 @@ export const getClientesByNombre = async (searchQuery: string = ""): Promise<(Cl
         return response.documents.map(processClienteDocument);
     }
 
-    // Con búsqueda: usar Query.search() con el índice fulltext
-    console.log(`[getClientesByNombre] Búsqueda con índice fulltext: "${searchQuery}"`);
+    console.log(`[getClientesByNombre] Búsqueda unificada multi-campo: "${searchQuery}"`);
     
     try {
+        // Buscar en campo unificado usando índice fulltext
         const response = await databases.listDocuments<Cliente & Models.Document>(
             DATABASE_ID,
             CLIENTES_COLLECTION_ID,
             [
-                Query.search('nombre_completo', searchQuery), // Usar índice fulltext
+                Query.search('search_unified', searchQuery),
                 Query.limit(500),
                 Query.orderDesc('$createdAt')
             ]
         );
 
-        console.log(`[getClientesByNombre] Resultados encontrados: ${response.documents.length}`);
-        return response.documents.map(processClienteDocument);
+        const processedDocs = response.documents.map(processClienteDocument);
+        
+        // Filtrar para que contenga TODAS las palabras (AND)
+        const filteredResults = filterByAllWords(processedDocs, searchQuery);
+        
+        console.log(`[getClientesByNombre] Resultados: ${response.documents.length} → filtrados AND: ${filteredResults.length}`);
+        return filteredResults;
     } catch (error) {
-        console.error('[getClientesByNombre] Error en búsqueda fulltext:', error);
-        // Fallback: si hay error, devolver array vacío
+        console.error('[getClientesByNombre] Error en búsqueda unificada:', error);
         return [];
     }
 };
 
 // CREAR Cliente
 export const createCliente = (newCliente: CreateClienteInput) => {
+  const clienteWithSearch = {
+    ...newCliente,
+    search_unified: generateSearchUnified(newCliente)
+  };
+  
   return databases.createDocument<Cliente & Models.Document>(
     DATABASE_ID,
     CLIENTES_COLLECTION_ID,
     ID.unique(),
-    newCliente
+    clienteWithSearch
   );
 };
 
 // ACTUALIZAR Cliente
 export const updateCliente = async ({ $id, data }: { $id: string, data: UpdateClienteInput }) => {
-  // historial_citas ya viene como string JSON desde el caller, no necesita serialización adicional
+  // Regenerar search_unified al actualizar
+  const dataWithSearch = {
+    ...data,
+    search_unified: generateSearchUnified(data)
+  };
+  
   const result = await databases.updateDocument<Cliente & Models.Document>(
     DATABASE_ID,
     CLIENTES_COLLECTION_ID,
     $id,
-    data
+    dataWithSearch
   );
   
-  // No procesamos el documento para mantener historial_citas como string
   return result as Cliente & Models.Document;
 };
 

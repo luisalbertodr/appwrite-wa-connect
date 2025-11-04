@@ -18,6 +18,7 @@ export interface Cliente extends LipooutDocument {
   nomcli?: string;
   ape1cli?: string;
   nombre_completo?: string;
+  search_unified?: string; // Campo concatenado para búsqueda multi-campo
   email?: string;
   dnicli?: string;
   dircli?: string;
