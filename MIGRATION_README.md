@@ -27,16 +27,33 @@ Se ha completado la migración del frontend de tu aplicación desde GitHub.
 
 ## ⚠️ Configuración Requerida
 
-### 1. Variables de Entorno
+### 1. Configuración de Appwrite
 
-Crea un archivo `.env` en la raíz del proyecto con tus credenciales de Appwrite:
+**IMPORTANTE**: Las credenciales de Appwrite se configuran en el archivo `index.html`, NO en un archivo .env.
 
-\`\`\`env
-VITE_APP_ENDPOINT=https://cloud.appwrite.io/v1
-VITE_APP_PROJECT_ID=tu_project_id_aqui
-\`\`\`
+#### Pasos para configurar Appwrite:
 
-Puedes encontrar estas credenciales en tu panel de Appwrite.
+1. **Crea un proyecto en Appwrite**:
+   - Ve a https://cloud.appwrite.io
+   - Crea una cuenta o inicia sesión
+   - Crea un nuevo proyecto
+   - Copia el **Project ID** de tu proyecto
+
+2. **Configura las credenciales**:
+   - Abre el archivo `index.html` en la raíz del proyecto
+   - Busca la sección `<!-- Configuración de Appwrite -->`
+   - Reemplaza `"YOUR_PROJECT_ID"` con tu Project ID real:
+   
+   ```html
+   <script>
+     window.VITE_APP_ENDPOINT = "https://cloud.appwrite.io/v1";
+     window.VITE_APP_PROJECT_ID = "tu-project-id-real"; // ⚠️ Cambiar esto
+   </script>
+   ```
+
+3. **Configura el dominio permitido**:
+   - En tu proyecto de Appwrite, ve a Settings > Platforms
+   - Añade tu dominio de Lovable como plataforma web permitida
 
 ### 2. Estructura de Base de Datos
 
@@ -74,10 +91,10 @@ El frontend base está listo. Faltan por migrar las páginas completas:
 
 ### Probar la Aplicación
 
-1. Asegúrate de tener el archivo `.env` configurado
-2. Ejecuta `npm run dev`
-3. Accede a la aplicación
-4. Inicia sesión con tus credenciales de Appwrite
+1. Asegúrate de configurar las credenciales de Appwrite en `index.html`
+2. La aplicación se está ejecutando en Lovable
+3. Configura tu proyecto de Appwrite con las colecciones necesarias
+4. Accede a la aplicación y podrás empezar a usarla
 
 ## 🔧 Hooks y Componentes Pendientes
 

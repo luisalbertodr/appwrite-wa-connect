@@ -1,16 +1,33 @@
 import { Client, Databases, Account, Storage } from 'appwrite';
 
+// Appwrite configuration - Los valores se leen desde window (configurados en index.html)
+const APPWRITE_ENDPOINT = (window as any).VITE_APP_ENDPOINT || 'https://cloud.appwrite.io/v1';
+const APPWRITE_PROJECT_ID = (window as any).VITE_APP_PROJECT_ID || 'YOUR_PROJECT_ID';
+
+// Validar que las credenciales estén configuradas
+if (!APPWRITE_PROJECT_ID || APPWRITE_PROJECT_ID === 'YOUR_PROJECT_ID') {
+  console.error(
+    '⚠️ Appwrite no configurado. Por favor, configura tus credenciales de Appwrite en index.html:\n' +
+    '1. Crea un proyecto en https://cloud.appwrite.io\n' +
+    '2. Añade estas líneas en el <head> de index.html:\n' +
+    '   <script>\n' +
+    '     window.VITE_APP_ENDPOINT = "https://cloud.appwrite.io/v1";\n' +
+    '     window.VITE_APP_PROJECT_ID = "tu-project-id";\n' +
+    '   </script>'
+  );
+}
+
 export const client = new Client();
-export const storage = new Storage(client);
 
 client
-  .setEndpoint(import.meta.env.VITE_APP_ENDPOINT)
-  .setProject(import.meta.env.VITE_APP_PROJECT_ID);
+  .setEndpoint(APPWRITE_ENDPOINT)
+  .setProject(APPWRITE_PROJECT_ID);
 
 export const databases = new Databases(client);
 export const account = new Account(client);
+export const storage = new Storage(client);
 
-export const PROJECT_ID = import.meta.env.VITE_APP_PROJECT_ID;
+export const PROJECT_ID = APPWRITE_PROJECT_ID;
 
 // === IDS BASE DE DATOS ===
 // Base de datos unificada Lipoout (incluye funcionalidad WAHA y gestión de clínica)
