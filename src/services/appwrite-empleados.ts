@@ -2,8 +2,8 @@ import { databases, DATABASE_ID, EMPLEADOS_COLLECTION_ID } from '@/lib/appwrite'
 import { Empleado, LipooutUserInput } from '@/types'; // Import LipooutUserInput
 import { ID, Query, Models } from 'appwrite'; // Import Models
 
-// Usamos el helper LipooutUserInput
-export type CreateEmpleadoInput = LipooutUserInput<Empleado>;
+// Usamos el helper LipooutUserInput y excluimos nombre_completo ya que se genera automáticamente
+export type CreateEmpleadoInput = LipooutUserInput<Omit<Empleado, 'nombre_completo'>>;
 export type UpdateEmpleadoInput = Partial<CreateEmpleadoInput>;
 
 export const getEmpleados = async (soloActivos: boolean = true): Promise<Empleado[]> => {
@@ -34,16 +34,12 @@ export const createEmpleado = (empleado: CreateEmpleadoInput) => {
 };
 
 export const updateEmpleado = (id: string, empleado: UpdateEmpleadoInput) => {
-   // Actualizar nombre_completo si nombre o apellidos cambian
-   const empleadoCompleto = { ...empleado };
+   const empleadoCompleto: any = { ...empleado };
    if (empleado.nombre !== undefined || empleado.apellidos !== undefined) {
-       // Asumimos que si se actualiza uno, se pasan ambos o se obtienen previamente
-       // Idealmente, se pasaría el nombre completo ya calculado desde el hook/componente
        empleadoCompleto.nombre_completo = `${empleado.nombre || ''} ${empleado.apellidos || ''}`.trim();
-       // Si solo se pasa uno, necesitaríamos obtener el valor actual del otro campo
    }
 
-  return databases.updateDocument<Empleado & Models.Document>( // Añadimos Models.Document
+  return databases.updateDocument<Empleado & Models.Document>(
     DATABASE_ID,
     EMPLEADOS_COLLECTION_ID,
     id,

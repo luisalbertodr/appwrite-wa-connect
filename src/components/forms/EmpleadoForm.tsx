@@ -12,7 +12,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface EmpleadoFormProps {
   empleadoInicial?: (Empleado & Models.Document) | null;
-  onSubmit: (data: LipooutUserInput<Omit<Empleado, keyof Models.Document | 'nombre_completo'>>) => Promise<void>;
+  onSubmit: (data: LipooutUserInput<Omit<Empleado, 'nombre_completo'>>) => Promise<void>;
   isSubmitting: boolean;
 }
 
@@ -23,6 +23,8 @@ const defaultValues: EmpleadoFormData = {
   telefono: '',
   rol: 'Recepción',
   activo: true,
+  notificaciones_habilitadas: true,
+  color: '',
 };
 
 export const EmpleadoForm = ({ empleadoInicial, onSubmit, isSubmitting }: EmpleadoFormProps) => {
@@ -35,6 +37,8 @@ export const EmpleadoForm = ({ empleadoInicial, onSubmit, isSubmitting }: Emplea
       telefono: empleadoInicial.telefono || '',
       rol: empleadoInicial.rol || 'Recepción',
       activo: empleadoInicial.activo ?? true,
+      notificaciones_habilitadas: empleadoInicial.notificaciones_habilitadas ?? true,
+      color: empleadoInicial.color || '',
     };
   };
 
@@ -44,9 +48,10 @@ export const EmpleadoForm = ({ empleadoInicial, onSubmit, isSubmitting }: Emplea
   });
 
   const handleSubmit = async (data: EmpleadoFormData) => {
-    const finalData: LipooutUserInput<Omit<Empleado, keyof Models.Document | 'nombre_completo'>> = {
+    const finalData: LipooutUserInput<Omit<Empleado, 'nombre_completo'>> = {
       ...data,
       telefono: data.telefono || undefined,
+      color: data.color || undefined,
     };
     await onSubmit(finalData);
   };
@@ -130,9 +135,43 @@ export const EmpleadoForm = ({ empleadoInicial, onSubmit, isSubmitting }: Emplea
                       <SelectItem value="Médico">Médico</SelectItem>
                       <SelectItem value="Recepción">Recepción</SelectItem>
                       <SelectItem value="Lectura">Lectura</SelectItem>
+                      <SelectItem value="Esteticista">Esteticista</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField 
+              control={form.control} 
+              name="color" 
+              render={({ field }) => (
+                <FormItem className="md:col-span-2">
+                  <FormLabel>Color (Opcional)</FormLabel>
+                  <FormControl>
+                    <Input {...field} type="color" value={field.value ?? ''} />
+                  </FormControl>
+                  <FormDescription>Color para identificar al empleado en la agenda</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="notificaciones_habilitadas"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
+                  <FormControl>
+                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>Notificaciones Habilitadas</FormLabel>
+                    <FormDescription>
+                      El empleado recibirá notificaciones del sistema.
+                    </FormDescription>
+                  </div>
                 </FormItem>
               )}
             />
@@ -141,7 +180,7 @@ export const EmpleadoForm = ({ empleadoInicial, onSubmit, isSubmitting }: Emplea
               control={form.control}
               name="activo"
               render={({ field }) => (
-                <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4 md:col-span-2">
+                <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4">
                   <FormControl>
                     <Checkbox checked={field.value} onCheckedChange={field.onChange} />
                   </FormControl>

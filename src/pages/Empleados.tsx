@@ -45,19 +45,17 @@ const Empleados = () => {
     setIsDialogOpen(true);
   };
 
-  const handleFormSubmit = async (data: LipooutUserInput<Empleado>) => {
+  const handleFormSubmit = async (data: LipooutUserInput<Omit<Empleado, 'nombre_completo'>>) => {
     try {
       if (empleadoToEdit) {
         await updateEmpleadoMutation.mutateAsync({ id: empleadoToEdit.$id, data });
         toast({ title: "Empleado actualizado" });
       } else {
-        // TODO: Crear usuario en Appwrite Auth si es necesario?
         await createEmpleadoMutation.mutateAsync(data);
         toast({ title: "Empleado creado" });
       }
       setIsDialogOpen(false);
       setEmpleadoToEdit(null);
-      // refetchEmpleados(); // invalidateQueries lo hace
     } catch (err) {
       toast({ title: `Error al ${empleadoToEdit ? 'actualizar' : 'crear'}`, description: (err as Error).message, variant: "destructive" });
     }

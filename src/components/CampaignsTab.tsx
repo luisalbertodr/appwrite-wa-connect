@@ -1,5 +1,5 @@
 
-import { useState, useEffect, ChangeEvent, useCallback } from 'react';
+import { useState, useEffect, ChangeEvent } from 'react';
 import { Client, Template, Campaign, MessageLog } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,18 +8,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Send, Download, Loader2, Search, Save, FileText, XCircle } from 'lucide-react';
+import { Send, Loader2, Search, Save, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { client, functions, Query, Models } from 'appwrite';
-import { Progress } from '@/components/ui/progress';
+import { Models } from 'appwrite';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogClose } from '@/components/ui/dialog';
 import { calculateAge } from '@/lib/validators';
-import { useTemplates } from '@/hooks/useTemplates';
-import { useCampaigns } from '@/hooks/useCampaigns';
-import { useClients } from '@/hooks/useClients';
+import { useAppwriteCollection } from '@/hooks/useAppwrite';
+import { TEMPLATES_COLLECTION_ID, CAMPAIGNS_COLLECTION_ID, MESSAGE_LOGS_COLLECTION_ID, CLIENTES_COLLECTION_ID } from '@/lib/appwrite';
 import LoadingSpinner from './LoadingSpinner';
+import { LipooutUserInput } from '@/types';
 
 const FILTERS_STORAGE_KEY_CAMPAIGNS = 'campaign-filters';
 
@@ -41,45 +40,45 @@ export function CampaignsTab() {
         return savedFilters ? JSON.parse(savedFilters) : { nomcli: '', pobcli: '', edad: '', intereses: '' };
     });
     
-    const { data: clients = [], total, isLoading: loadingClients, applyQueries } = useClients();
-    const { data: templates = [], isLoading: loadingTemplates, createTemplate } = useTemplates();
-    const { data: campaigns = [], isLoading: loadingCampaigns, createCampaign, getCampaignLogs } = useCampaigns();
+    const { data: clients = [], loading: loadingClients } = useAppwriteCollection<Client>(CLIENTES_COLLECTION_ID);
+    const { data: templates = [], loading: loadingTemplates, create: createTemplate } = useAppwriteCollection<Template>(TEMPLATES_COLLECTION_ID);
+    const { data: campaigns = [], loading: loadingCampaigns, create: createCampaign } = useAppwriteCollection<Campaign>(CAMPAIGNS_COLLECTION_ID);
+    const total = clients.length;
 
     const [newTemplate, setNewTemplate] = useState<Omit<Template, '$id'>>({ name: '', messages: ['', '', '', ''], imageUrls: ['', '', '', ''] });
     const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
     const [isSending, setIsSending] = useState(false);
-    const [activeCampaignId, setActiveCampaignId] = useState<string | null>(null);
-    const [progress, setProgress] = useState({ sent: 0, failed: 0, skipped: 0, total: 0 });
     const [selectedClients, setSelectedClients] = useState<Map<string, Client>>(new Map());
     const [scheduledDate, setScheduledDate] = useState('');
     const [scheduledTime, setScheduledTime] = useState('');
     const [showLogDialog, setShowLogDialog] = useState(false);
-    const [logContent, setLogContent] = useState<MessageLog[]>([]);
-
-    const buildQueriesFromFilters = useCallback(() => {
-        const queries: string[] = [];
-        if (filters.nomcli) queries.push(Query.search('nomcli', filters.nomcli));
-        if (filters.pobcli) queries.push(Query.equal('pobcli', filters.pobcli));
-        if (filters.edad) {
-            const [min, max] = filters.edad.split('-').map(Number);
-            if (!isNaN(min)) queries.push(Query.greaterThanEqual('edad', min));
-            if (!isNaN(max)) queries.push(Query.lessThanEqual('edad', max));
-        }
-        if (filters.intereses) {
-            filters.intereses.split(',').forEach((interest: string) => {
-                if (interest.trim()) {
-                    queries.push(Query.search('intereses', interest.trim()));
-                }
-            });
-        }
-        return queries;
-    }, [filters]);
+    const [logContent, setLogContent] = useState<(MessageLog & Models.Document)[]>([]);
+    const [filteredClients, setFilteredClients] = useState<(Client & Models.Document)[]>([]);
 
     useEffect(() => {
-        const queries = buildQueriesFromFilters();
-        applyQueries(queries);
+        let filtered = clients;
+        if (filters.nomcli) {
+            filtered = filtered.filter((c: Client & Models.Document) => c.nomcli?.toLowerCase().includes(filters.nomcli.toLowerCase()));
+        }
+        if (filters.pobcli) {
+            filtered = filtered.filter((c: Client & Models.Document) => c.pobcli?.toLowerCase().includes(filters.pobcli.toLowerCase()));
+        }
+        if (filters.edad) {
+            const [min, max] = filters.edad.split('-').map(Number);
+            filtered = filtered.filter((c: Client & Models.Document) => {
+                const edad = calculateAge(c.fecnac);
+                return edad !== undefined && (!isNaN(min) ? edad >= min : true) && (!isNaN(max) ? edad <= max : true);
+            });
+        }
+        if (filters.intereses) {
+            const interests = filters.intereses.split(',').map((i: string) => i.trim().toLowerCase());
+            filtered = filtered.filter((c: Client & Models.Document) => 
+                interests.some((interest: string) => c.intereses?.some(ci => ci.toLowerCase().includes(interest)))
+            );
+        }
+        setFilteredClients(filtered);
         localStorage.setItem(FILTERS_STORAGE_KEY_CAMPAIGNS, JSON.stringify(filters));
-    }, [filters, applyQueries, buildQueriesFromFilters]);
+    }, [filters, clients]);
 
     const handleFilterChange = (e: ChangeEvent<HTMLInputElement>) => {
         setFilters({ ...filters, [e.target.name]: e.target.value });
@@ -98,11 +97,11 @@ export function CampaignsTab() {
     };
 
     const handleSelectAllClients = () => {
-        if (selectedClients.size === clients.length) {
+        if (selectedClients.size === filteredClients.length) {
             setSelectedClients(new Map());
         } else {
             const newMap = new Map<string, Client>();
-            clients.forEach((c: Client & Models.Document) => newMap.set(c.$id, c));
+            filteredClients.forEach((c: Client & Models.Document) => newMap.set(c.$id, c));
             setSelectedClients(newMap);
         }
     };
@@ -113,7 +112,7 @@ export function CampaignsTab() {
             return;
         }
         try {
-            await createTemplate(newTemplate);
+            await createTemplate(newTemplate as LipooutUserInput<Template>);
             toast({ title: 'Éxito', description: 'Plantilla guardada correctamente.' });
             setNewTemplate({ name: '', messages: ['', '', '', ''], imageUrls: ['', '', '', ''] });
         } catch (error) {
@@ -147,23 +146,20 @@ export function CampaignsTab() {
 
         setIsSending(true);
         const campaignClients = Array.from(selectedClients.values());
-        const campaignName = templates.find(t => t.$id === selectedTemplateId)?.name || 'Campaña sin nombre';
+        const campaignName = templates.find((t: Template & Models.Document) => t.$id === selectedTemplateId)?.name || 'Campaña sin nombre';
 
-        const newCampaignData: Partial<Campaign> = {
+        const newCampaignData: LipooutUserInput<Campaign> = {
             name: campaignName,
             templateId: selectedTemplateId,
             clients: JSON.stringify(campaignClients.map(c => ({ $id: c.$id, nomcli: c.nomcli, tel1cli: c.tel1cli }))),
             scheduledDate: schedule?.toISOString(),
             status: isScheduled ? 'scheduled' : 'pending',
             audienceCount: campaignClients.length,
+            createdAt: new Date().toISOString(),
         };
         
         try {
-            const createdCampaign = await createCampaign(newCampaignData as LipooutUserInput<Campaign>);
-            setActiveCampaignId(createdCampaign.$id);
-            if (!isScheduled) {
-                 await functions.createExecution('sendCampaign', createdCampaign.$id);
-            }
+            await createCampaign(newCampaignData);
             toast({ title: 'Éxito', description: `Campaña ${isScheduled ? 'programada' : 'iniciada'} correctamente.` });
         } catch (error) {
             console.error("Error starting campaign:", error);
@@ -175,8 +171,9 @@ export function CampaignsTab() {
 
     const viewLogs = async (campaignId: string) => {
         try {
-            const logs = await getCampaignLogs(campaignId);
-            setLogContent(logs);
+            const { data: allLogs } = useAppwriteCollection<MessageLog>(MESSAGE_LOGS_COLLECTION_ID);
+            const logs = allLogs.filter((log: MessageLog & Models.Document) => log.campaignId === campaignId);
+            setLogContent(logs as (MessageLog & Models.Document)[]);
             setShowLogDialog(true);
         } catch (error) {
             toast({ title: "Error", description: "No se pudieron cargar los logs.", variant: "destructive" });
@@ -220,7 +217,7 @@ export function CampaignsTab() {
                          <Select onValueChange={setSelectedTemplateId} value={selectedTemplateId}>
                             <SelectTrigger><SelectValue placeholder="Seleccionar plantilla" /></SelectTrigger>
                             <SelectContent>
-                                {templates.map(t => <SelectItem key={t.$id} value={t.$id}>{t.name}</SelectItem>)}
+                                {templates.map((t: Template & Models.Document) => <SelectItem key={t.$id} value={t.$id!}>{t.name}</SelectItem>)}
                             </SelectContent>
                         </Select>
                         <div className="flex items-center space-x-2">
@@ -234,7 +231,6 @@ export function CampaignsTab() {
                             {isSending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
                              Enviar a {selectedClients.size} clientes
                         </Button>
-                        {isSending && <Progress value={(progress.sent + progress.failed) / progress.total * 100} className="w-full" />}
                     </CardContent>
                 </Card>
 
@@ -245,12 +241,12 @@ export function CampaignsTab() {
                             <Table>
                                 <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead>Estado</TableHead><TableHead>Progreso</TableHead><TableHead>Acciones</TableHead></TableRow></TableHeader>
                                 <TableBody>
-                                    {campaigns.map(c => (
+                                    {campaigns.map((c: Campaign & Models.Document) => (
                                         <TableRow key={c.$id}>
                                             <TableCell>{c.name}</TableCell>
                                             <TableCell><Badge>{statusTranslations[c.status] || c.status}</Badge></TableCell>
                                             <TableCell>{c.sentCount ?? 0} / {c.audienceCount}</TableCell>
-                                            <TableCell><Button variant="outline" size="sm" onClick={() => viewLogs(c.$id)}><FileText className="h-4 w-4"/></Button></TableCell>
+                                            <TableCell><Button variant="outline" size="sm" onClick={() => viewLogs(c.$id!)}><FileText className="h-4 w-4"/></Button></TableCell>
                                         </TableRow>
                                     ))}
                                 </TableBody>
@@ -263,16 +259,16 @@ export function CampaignsTab() {
             <Card>
                 <CardHeader><CardTitle>3. Selección de Clientes ({selectedClients.size} / {total})</CardTitle></CardHeader>
                 <CardContent>
-                    <div className="flex items-center space-x-2 mb-4">
+                        <div className="flex items-center space-x-2 mb-4">
                         <Input placeholder="Buscar por nombre..." name="nomcli" value={filters.nomcli} onChange={handleFilterChange} />
                         <Input placeholder="Ciudad..." name="pobcli" value={filters.pobcli} onChange={handleFilterChange} />
-                        <Button onClick={() => applyQueries(buildQueriesFromFilters())}><Search className="mr-2 h-4 w-4" /> Filtrar</Button>
+                        <Button><Search className="mr-2 h-4 w-4" /> Filtrar</Button>
                     </div>
                     <ScrollArea className="h-[600px]">
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead><Checkbox onCheckedChange={handleSelectAllClients} checked={selectedClients.size === clients.length && clients.length > 0} /></TableHead>
+                                    <TableHead><Checkbox onCheckedChange={handleSelectAllClients} checked={selectedClients.size === filteredClients.length && filteredClients.length > 0} /></TableHead>
                                     <TableHead>Nombre</TableHead>
                                     <TableHead>Teléfono</TableHead>
                                     <TableHead>Ciudad</TableHead>
@@ -281,7 +277,7 @@ export function CampaignsTab() {
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {clients.map((client: Client & Models.Document) => (
+                                {filteredClients.map((client: Client & Models.Document) => (
                                     <TableRow key={client.$id} className={selectedClients.has(client.$id) ? 'bg-blue-100' : ''} onClick={() => handleClientSelection(client)}>
                                         <TableCell><Checkbox checked={selectedClients.has(client.$id)} /></TableCell>
                                         <TableCell>{client.nomcli}</TableCell>
@@ -304,7 +300,7 @@ export function CampaignsTab() {
                         <Table>
                             <TableHeader><TableRow><TableHead>Cliente</TableHead><TableHead>Estado</TableHead><TableHead>Error</TableHead></TableRow></TableHeader>
                             <TableBody>
-                                {logContent.map(log => (
+                                {logContent.map((log: MessageLog & Models.Document) => (
                                     <TableRow key={log.$id}>
                                         <TableCell>{log.clientName}</TableCell>
                                         <TableCell><Badge variant={log.status === 'success' ? 'default' : 'destructive'}>{log.status}</Badge></TableCell>

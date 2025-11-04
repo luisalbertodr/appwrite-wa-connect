@@ -116,8 +116,10 @@ export const empleadoSchema = z.object({
   apellidos: z.string().min(1, "Los apellidos son obligatorios"),
   email: z.string().email("Email inválido"),
   telefono: z.string().optional(),
-  rol: z.enum(['Admin', 'Médico', 'Recepción', 'Lectura']),
+  rol: z.enum(['Admin', 'Médico', 'Recepción', 'Lectura', 'Esteticista']),
   activo: z.boolean(),
+  notificaciones_habilitadas: z.boolean().default(true),
+  color: z.string().optional(),
 });
 export type EmpleadoFormData = z.infer<typeof empleadoSchema>;
 
