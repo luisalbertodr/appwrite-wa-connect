@@ -411,10 +411,21 @@ All colors MUST be HSL.
 /* Estilos para header de recursos */
 /* La fila de recursos debe mostrarse para ver los nombres de empleados */
 
-/* Ocultar la fila vacía de eventos "All Day" que aparece debajo de los días */
+/* Ocultar COMPLETAMENTE la fila vacía de eventos "All Day" */
 .rbc-time-header > .rbc-row.rbc-allday-cell,
-.rbc-time-header .rbc-allday-cell {
+.rbc-time-header .rbc-allday-cell,
+.rbc-time-header .rbc-row:has(.rbc-allday-cell),
+.rbc-allday-cell,
+.rbc-row.rbc-allday-cell {
   display: none !important;
+  height: 0 !important;
+  min-height: 0 !important;
+  max-height: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: 0 !important;
+  overflow: hidden !important;
+  visibility: hidden !important;
 }
 
 /* Headers de columnas individuales */
@@ -422,7 +433,7 @@ All colors MUST be HSL.
 .rbc-time-header-content .rbc-header {
   font-size: 0.875rem;
   font-weight: 600;
-  padding: 12px 4px;
+  padding: 6px 4px;
   background-color: hsl(var(--muted) / 0.5);
   border-left: 1px solid hsl(var(--calendar-border));
 }

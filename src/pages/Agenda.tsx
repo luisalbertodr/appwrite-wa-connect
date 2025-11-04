@@ -828,7 +828,7 @@ const Agenda = () => {
     const diaNumero = format(date, 'd');
     
     return (
-      <div className="flex flex-col items-center py-2">
+      <div className="flex flex-col items-center py-1">
         <span className="text-xs font-semibold">{diaNombre}</span>
         <span className="text-lg font-bold">{diaNumero}</span>
       </div>
@@ -1275,7 +1275,7 @@ const Agenda = () => {
                         event: CustomEvent,
                         header: CustomHeader,
                         resourceHeader: ({ label }: { label: React.ReactNode }) => (
-                          <div className="py-3 px-2 text-center font-semibold text-sm border-b bg-muted/50">
+                          <div className="py-1.5 px-2 text-center font-semibold text-sm border-b bg-muted/50">
                             {label}
                           </div>
                         ),
