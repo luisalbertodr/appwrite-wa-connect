@@ -19,6 +19,7 @@ import { RecursoForm } from '@/components/forms/RecursoForm';
 import { ProveedorForm } from '@/components/forms/ProveedorForm';
 import { PermisosTab } from '@/components/permisos/PermisosTab';
 import { FamiliasTab } from '@/components/FamiliasTab';
+import { MigrationSection } from '@/components/MigrationSection';
 import { useGetConfiguration, useUpdateConfiguration } from '@/hooks/useConfiguration';
 import { useGetEmpleados, useCreateEmpleado, useUpdateEmpleado, useDeleteEmpleado } from '@/hooks/useEmpleados';
 import { useGetRecursos, useCreateRecurso, useUpdateRecurso, useDeleteRecurso } from '@/hooks/useRecursos';
@@ -369,7 +370,12 @@ const Configuracion = () => {
 
         {/* --- Contenido Pestaña Importación --- */}
         <TabsContent value="import">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="space-y-6">
+            {/* Sección de Migración */}
+            <MigrationSection />
+            
+            {/* Sección de Importación CSV */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
                 <CardTitle>Subir Archivo CSV</CardTitle>
@@ -448,6 +454,7 @@ const Configuracion = () => {
                 )}
               </CardContent>
             </Card>
+            </div>
           </div>
         </TabsContent>
 

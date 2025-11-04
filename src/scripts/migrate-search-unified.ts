@@ -6,21 +6,27 @@ import { generateSearchUnified } from '@/utils/search-helpers';
 /**
  * Script para poblar el campo search_unified en todos los clientes existentes
  * 
- * CÓMO USAR:
- * 1. Ejecutar primero el script PowerShell: update_clients_search_unified.ps1
- * 2. Importar y ejecutar esta función desde la consola del navegador o desde un componente temporal
- * 
- * Ejemplo desde consola:
- * import { migrateSearchUnified } from '@/scripts/migrate-search-unified';
- * await migrateSearchUnified();
+ * @param onProgress - Callback opcional para reportar el progreso (current, total)
+ * @returns Estadísticas de la migración
  */
-export const migrateSearchUnified = async () => {
+export const migrateSearchUnified = async (
+  onProgress?: (current: number, total: number) => void
+) => {
   console.log('🔄 Iniciando migración de search_unified...');
   
   let offset = 0;
   const limit = 100;
   let totalUpdated = 0;
   let totalErrors = 0;
+  
+  // Obtener el total de clientes primero
+  const countResponse = await databases.listDocuments<Cliente & Models.Document>(
+    DATABASE_ID,
+    CLIENTES_COLLECTION_ID,
+    [Query.limit(1)]
+  );
+  const totalClientes = countResponse.total;
+  console.log(`📊 Total de clientes a procesar: ${totalClientes}`);
   
   try {
     while (true) {
@@ -48,6 +54,12 @@ export const migrateSearchUnified = async () => {
           );
           
           totalUpdated++;
+          
+          // Notificar progreso
+          if (onProgress) {
+            onProgress(totalUpdated, totalClientes);
+          }
+          
           if (totalUpdated % 50 === 0) {
             console.log(`✅ Actualizados: ${totalUpdated} clientes`);
           }
@@ -65,8 +77,11 @@ export const migrateSearchUnified = async () => {
     if (totalErrors > 0) {
       console.log(`⚠️ Errores: ${totalErrors}`);
     }
+    
+    return { totalUpdated, totalErrors };
   } catch (error) {
     console.error('❌ Error durante la migración:', error);
     console.log(`ℹ️ Clientes procesados antes del error: ${totalUpdated}`);
+    throw error;
   }
 };
