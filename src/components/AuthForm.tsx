@@ -31,12 +31,9 @@ const AuthForm: React.FC<{ onLoginSuccess: (user: any) => void }> = ({ onLoginSu
     setError('');
     setLoading(true);
     try {
-      // --- INICIO DE LA MODIFICACIÓN ---
-      // Reemplaza "https://tu-dominio.com/" con la URL de tu aplicación desplegada
-      const successUrl = 'https://wasap.lipoout.com/';
-      const failureUrl = 'https://wasap.lipoout.com/login';
+      const successUrl = import.meta.env.VITE_OAUTH_SUCCESS_URL || `${window.location.origin}/`;
+      const failureUrl = import.meta.env.VITE_OAUTH_FAILURE_URL || `${window.location.origin}/login`;
       await account.createOAuth2Session(OAuthProvider.Google, successUrl, failureUrl);
-      // --- FIN DE LA MODIFICACIÓN ---
     } catch (err: any) {
       setError(err.message || 'An error occurred during Google authentication.');
     } finally {

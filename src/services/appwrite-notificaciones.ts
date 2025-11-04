@@ -141,8 +141,14 @@ export const marcarComoLeida = async (
     notificacionId
   );
 
-  // Parsear leida_por
-  const leidaPor = JSON.parse(notificacion.leida_por);
+  // Parsear leida_por con fallback y try/catch
+  let leidaPor: any[] = [];
+  try {
+    leidaPor = JSON.parse(notificacion.leida_por || '[]');
+  } catch (error) {
+    console.error('Error parseando leida_por:', error);
+    leidaPor = [];
+  }
   
   // Verificar si ya está leída por este empleado
   if (leidaPor.some((l: any) => l.empleado_id === empleadoId)) {

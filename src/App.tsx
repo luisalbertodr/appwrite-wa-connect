@@ -1,6 +1,5 @@
 import { Suspense, lazy } from 'react';
 import { HashRouter, Routes, Route } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from '@/components/ui/sonner';
 import { AppLayout } from '@/components/layout/AppLayout';
 import LoadingSpinner from './components/LoadingSpinner';
@@ -18,11 +17,9 @@ const Marketing = lazy(() => import('./pages/Marketing'));
 const MarketingWaha = lazy(() => import('./pages/MarketingWaha'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
-const queryClient = new QueryClient();
-
 const App = () => {
   return (
-    <QueryClientProvider client={queryClient}>
+    <>
       <Toaster />
       <HashRouter>
         <Suspense
@@ -33,7 +30,6 @@ const App = () => {
           }
         >
           <Routes>
-            {/* === RUTAS LIPOUT (CON LAYOUT) === */}
             <Route path="/" element={<AppLayout />}>
               <Route index element={<Dashboard />} />
               <Route path="agenda" element={<Agenda />} />
@@ -44,23 +40,13 @@ const App = () => {
               <Route path="tpv" element={<TPV />} />
               <Route path="configuracion" element={<Configuracion />} />
               <Route path="marketing" element={<Marketing />} />
-              
-              {/* MODIFICACIÓN: Ruta "/marketing-waha" movida aquí dentro */}
               <Route path="marketing-waha" element={<MarketingWaha />} />
-
-              {/* Ruta 404 para las páginas dentro del layout */}
               <Route path="*" element={<NotFound />} />
             </Route>
-
-            {/* === RUTA WAHA (SIN LAYOUT) === */}
-            {/* MODIFICACIÓN: La ruta de arriba fue movida */}
-            
-            {/* Rutas 404 fuera del layout (aunque ahora todas están dentro) */}
-            <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
       </HashRouter>
-    </QueryClientProvider>
+    </>
   );
 };
 

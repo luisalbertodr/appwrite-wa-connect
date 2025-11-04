@@ -316,8 +316,14 @@ export const deleteCita = async (id: string): Promise<void> => {
                 
                 console.log('Entrada de historial creada:', entradaHistorial);
                 
-                // 5. Agregar al historial del cliente (crear array si no existe)
-                const historialActual = cliente.historial_citas || [];
+                // 5. Deserializar historial del cliente con fallback
+                let historialActual: HistorialCita[] = [];
+                try {
+                    historialActual = JSON.parse(cliente.historial_citas || '[]');
+                } catch (error) {
+                    console.error('Error deserializando historial_citas:', error);
+                    historialActual = [];
+                }
                 const nuevoHistorial = [...historialActual, entradaHistorial];
                 
                 // 6. Actualizar el cliente con el nuevo historial
@@ -349,4 +355,41 @@ export const deleteCita = async (id: string): Promise<void> => {
         console.error(`%c✗ Error al eliminar cita ${id}:`, 'color: red; font-weight: bold;', error);
         throw error;
     }
+};
+
+// Obtener citas por rango de fechas
+export const getCitasPorRango = async (
+  fechaInicio: Date,
+  fechaFin: Date,
+  empleadoId?: string
+): Promise<(Cita & Models.Document)[]> => {
+  const inicioISO = formatISO(fechaInicio);
+  const finISO = formatISO(fechaFin);
+
+  console.log(`%c[Service: getCitasPorRango] Buscando citas entre ${inicioISO} y ${finISO}${empleadoId ? ` para empleado ${empleadoId}` : ''}`, 'color: blue; font-weight: bold;');
+
+  const queries = [
+    Query.greaterThanEqual('fecha_hora', inicioISO),
+    Query.lessThan('fecha_hora', finISO),
+    Query.limit(500),
+    Query.orderAsc('fecha_hora')
+  ];
+
+  if (empleadoId) {
+    queries.push(Query.equal('empleado_id', empleadoId));
+  }
+
+  try {
+    const response = await databases.listDocuments<Cita & Models.Document>(
+      DATABASE_ID,
+      CITAS_COLLECTION_ID,
+      queries
+    );
+
+    console.log(`[Service: getCitasPorRango] Documentos recibidos: ${response.documents.length}`);
+    return response.documents;
+  } catch (error) {
+    console.error("%c[Service: getCitasPorRango] ERROR:", 'color: red; font-weight: bold;', error);
+    return [];
+  }
 };
