@@ -8,6 +8,7 @@ import LoadingSpinner from './components/LoadingSpinner';
 // Lazy loading de las páginas
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Clientes = lazy(() => import('./pages/Clientes'));
+const Empleados = lazy(() => import('./pages/Empleados'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
 const queryClient = new QueryClient();
@@ -28,6 +29,7 @@ const App = () => {
             <Route path="/" element={<AppLayout />}>
               <Route index element={<Dashboard />} />
               <Route path="clientes" element={<Clientes />} />
+              <Route path="empleados" element={<Empleados />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

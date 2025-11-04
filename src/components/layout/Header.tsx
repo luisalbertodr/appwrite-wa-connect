@@ -19,6 +19,7 @@ const navItems = [
   { href: '/', label: 'Inicio', icon: Home },
   { href: '/agenda', label: 'Agenda', icon: Calendar },
   { href: '/clientes', label: 'Clientes', icon: Users },
+  { href: '/empleados', label: 'Empleados', icon: Users },
   { href: '/articulos', label: 'Artículos', icon: Archive },
   { href: '/tpv', label: 'TPV', icon: ShoppingCart },
   { href: '/facturacion', label: 'Facturas', icon: BarChart3 },
