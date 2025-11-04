@@ -1259,14 +1259,6 @@ const Agenda = () => {
                     }}
                     components={{
                         event: CustomEvent,
-                        resourceHeader: ({ label }: { label: React.ReactNode }) => {
-                          // Mostrar nombre del empleado en la parte superior de cada columna en vista Day/Week
-                          return (
-                            <div className="py-3 px-2 text-center font-semibold text-sm border-b bg-muted/50">
-                              {label}
-                            </div>
-                          );
-                        },
                     }}
                   />
                 </div>

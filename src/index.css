@@ -408,10 +408,13 @@ All colors MUST be HSL.
   grid-template-columns: repeat(7, 1fr);
 }
 
-/* Ocultar la fila de resource headers vacía en vista Week/Day */
+/* Estilos para header de recursos */
+/* Ocultar completamente la fila de recursos que aparece vacía */
 .rbc-time-header-content .rbc-row.rbc-row-resource {
-  display: none !important;
+  display: none;
 }
+
+/* Headers de columnas individuales */
 
 .rbc-time-header-content .rbc-header {
   font-size: 0.875rem;
