@@ -3,7 +3,7 @@ import { Calendar, dateFnsLocalizer, View } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
-import { Calendar as CalendarIcon, Plus, Pencil, Trash2 } from 'lucide-react';
+import { Calendar as CalendarIcon, Plus, Trash2, Filter, Users, Clock, CheckCircle2 } from 'lucide-react';
 import { useGetCitasPorSemana, useCreateCita, useUpdateCita, useDeleteCita } from '@/hooks/useAgenda';
 import { useGetEmpleados } from '@/hooks/useEmpleados';
 import { useGetClientes } from '@/hooks/useClientes';
@@ -11,6 +11,9 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { CitaForm } from '@/components/forms/CitaForm';
 import { Cita, CitaInput } from '@/types';
@@ -44,6 +47,8 @@ const Agenda = () => {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedCita, setSelectedCita] = useState<(Cita & Models.Document) | null>(null);
   const [defaultFechaHora, setDefaultFechaHora] = useState<Date | undefined>();
+  const [filtroEmpleado, setFiltroEmpleado] = useState<string>('todos');
+  const [filtroEstado, setFiltroEstado] = useState<string>('todos');
 
   const { data: citas, isLoading: loadingCitas } = useGetCitasPorSemana(selectedDate);
   const { data: empleados } = useGetEmpleados(true);
@@ -55,7 +60,19 @@ const Agenda = () => {
   const events: CalendarEvent[] = useMemo(() => {
     if (!citas) return [];
 
-    return citas.map((cita) => {
+    let citasFiltradas = citas;
+
+    // Filtrar por empleado
+    if (filtroEmpleado !== 'todos') {
+      citasFiltradas = citasFiltradas.filter((cita) => cita.empleado_id === filtroEmpleado);
+    }
+
+    // Filtrar por estado
+    if (filtroEstado !== 'todos') {
+      citasFiltradas = citasFiltradas.filter((cita) => cita.estado === filtroEstado);
+    }
+
+    return citasFiltradas.map((cita) => {
       const cliente = clientes?.find((c) => c.$id === cita.cliente_id);
       const empleado = empleados?.find((e) => e.$id === cita.empleado_id);
       
@@ -70,7 +87,25 @@ const Agenda = () => {
         resource: cita,
       };
     });
-  }, [citas, clientes, empleados]);
+  }, [citas, clientes, empleados, filtroEmpleado, filtroEstado]);
+
+  const citasHoy = useMemo(() => {
+    if (!citas) return [];
+    const hoy = format(new Date(), 'yyyy-MM-dd');
+    return citas.filter((cita) => {
+      const citaFecha = format(new Date(cita.fecha_hora), 'yyyy-MM-dd');
+      return citaFecha === hoy;
+    });
+  }, [citas]);
+
+  const estadisticas = useMemo(() => {
+    return {
+      total: citasHoy.length,
+      confirmadas: citasHoy.filter((c) => c.estado === 'confirmada').length,
+      realizadas: citasHoy.filter((c) => c.estado === 'realizada').length,
+      pendientes: citasHoy.filter((c) => c.estado === 'agendada').length,
+    };
+  }, [citasHoy]);
 
   const eventStyleGetter = (event: CalendarEvent) => {
     const empleado = empleados?.find((e) => e.$id === event.resource.empleado_id);
@@ -148,7 +183,7 @@ const Agenda = () => {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <CalendarIcon className="h-8 w-8" />
@@ -168,18 +203,108 @@ const Agenda = () => {
         </Button>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Calendario de Citas</CardTitle>
-          <CardDescription>
-            {view === 'week' && 'Vista semanal'}
-            {view === 'day' && 'Vista diaria'}
-            {view === 'month' && 'Vista mensual'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div style={{ height: '700px' }}>
-            <Calendar
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium">Citas Hoy</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{estadisticas.total}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Total programadas
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Clock className="h-4 w-4" />
+              Pendientes
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{estadisticas.pendientes}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Por confirmar
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4" />
+              Confirmadas
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{estadisticas.confirmadas}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Listas para atender
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm font-medium">Realizadas</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{estadisticas.realizadas}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Completadas hoy
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="lg:col-span-3">
+          <Card>
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <CardTitle>Calendario de Citas</CardTitle>
+                  <CardDescription>
+                    {view === 'week' && 'Vista semanal'}
+                    {view === 'day' && 'Vista diaria'}
+                    {view === 'month' && 'Vista mensual'}
+                  </CardDescription>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex items-center gap-2">
+                    <Filter className="h-4 w-4 text-muted-foreground" />
+                    <Select value={filtroEmpleado} onValueChange={setFiltroEmpleado}>
+                      <SelectTrigger className="w-[160px]">
+                        <SelectValue placeholder="Empleado" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="todos">Todos</SelectItem>
+                        {empleados?.map((empleado) => (
+                          <SelectItem key={empleado.$id} value={empleado.$id}>
+                            {empleado.nombre_completo}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Select value={filtroEstado} onValueChange={setFiltroEstado}>
+                    <SelectTrigger className="w-[140px]">
+                      <SelectValue placeholder="Estado" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="todos">Todos</SelectItem>
+                      <SelectItem value="agendada">Agendada</SelectItem>
+                      <SelectItem value="confirmada">Confirmada</SelectItem>
+                      <SelectItem value="realizada">Realizada</SelectItem>
+                      <SelectItem value="cancelada">Cancelada</SelectItem>
+                      <SelectItem value="no_asistio">No Asistió</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div style={{ height: '700px' }}>
+                <Calendar
               localizer={localizer}
               events={events}
               startAccessor="start"
@@ -221,9 +346,89 @@ const Agenda = () => {
               step={15}
               timeslots={4}
             />
-          </div>
-        </CardContent>
-      </Card>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="lg:col-span-1">
+          <Card className="h-full">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="h-5 w-5" />
+                Citas de Hoy
+              </CardTitle>
+              <CardDescription>
+                {format(new Date(), 'EEEE, d MMMM', { locale: es })}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[700px] pr-4">
+                {citasHoy.length === 0 ? (
+                  <div className="text-center text-muted-foreground py-8">
+                    No hay citas para hoy
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {citasHoy
+                      .sort((a, b) => new Date(a.fecha_hora).getTime() - new Date(b.fecha_hora).getTime())
+                      .map((cita) => {
+                        const cliente = clientes?.find((c) => c.$id === cita.cliente_id);
+                        const empleado = empleados?.find((e) => e.$id === cita.empleado_id);
+                        const estadoColors = {
+                          agendada: 'bg-blue-500/10 text-blue-700 border-blue-200',
+                          confirmada: 'bg-green-500/10 text-green-700 border-green-200',
+                          realizada: 'bg-purple-500/10 text-purple-700 border-purple-200',
+                          cancelada: 'bg-red-500/10 text-red-700 border-red-200',
+                          no_asistio: 'bg-orange-500/10 text-orange-700 border-orange-200',
+                        };
+                        
+                        return (
+                          <div
+                            key={cita.$id}
+                            className="p-3 border rounded-lg hover:bg-accent cursor-pointer transition-colors"
+                            onClick={() => {
+                              setSelectedCita(cita);
+                              setDefaultFechaHora(undefined);
+                              setIsDialogOpen(true);
+                            }}
+                          >
+                            <div className="flex items-start justify-between gap-2 mb-2">
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-sm truncate">
+                                  {cliente?.nombre_completo || 'Cliente'}
+                                </p>
+                                <p className="text-xs text-muted-foreground truncate">
+                                  {empleado?.nombre_completo || 'Empleado'}
+                                </p>
+                              </div>
+                              <Badge variant="outline" className={`text-xs ${estadoColors[cita.estado]}`}>
+                                {cita.estado === 'agendada' && 'Agendada'}
+                                {cita.estado === 'confirmada' && 'Confirmada'}
+                                {cita.estado === 'realizada' && 'Realizada'}
+                                {cita.estado === 'cancelada' && 'Cancelada'}
+                                {cita.estado === 'no_asistio' && 'No Asistió'}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <Clock className="h-3 w-3" />
+                              {format(new Date(cita.fecha_hora), 'HH:mm')} - {cita.duracion} min
+                            </div>
+                            {cita.precio_total > 0 && (
+                              <p className="text-xs font-medium mt-1">
+                                {cita.precio_total.toFixed(2)} €
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })}
+                  </div>
+                )}
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
