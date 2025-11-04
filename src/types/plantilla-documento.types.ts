@@ -40,13 +40,13 @@ export interface PlantillaDocumento extends LipooutDocument {
   activa: boolean;
   requiere_firma: boolean;
   version: string; // ej: "1.0", "2.1"
-  fecha_creacion: string; // ISO 8601
-  creado_por: string; // empleado_id
-  ultima_modificacion: string; // ISO 8601
-  modificado_por: string; // empleado_id
+  fecha_creacion?: string; // ISO 8601 (opcional - usar $createdAt de Appwrite)
+  creado_por?: string; // empleado_id (opcional)
+  ultima_modificacion?: string; // ISO 8601 (opcional - usar $updatedAt de Appwrite)
+  modificado_por?: string; // empleado_id (opcional)
   
   // Uso
-  veces_utilizada: number;
+  veces_utilizada?: number; // (opcional)
 }
 
 // Tipo para CREAR/ACTUALIZAR plantillas
@@ -58,14 +58,14 @@ export interface PlantillaDocumentoInput {
   campos: string; // JSON de CampoPlantilla[]
   archivo_base_id?: string;
   archivo_base_url?: string;
-  activa: boolean;
-  requiere_firma: boolean;
-  version: string;
-  fecha_creacion: string;
-  creado_por: string;
-  ultima_modificacion: string;
-  modificado_por: string;
-  veces_utilizada: number;
+  activa?: boolean;
+  requiere_firma?: boolean;
+  version?: string;
+  fecha_creacion?: string;
+  creado_por?: string;
+  ultima_modificacion?: string;
+  modificado_por?: string;
+  veces_utilizada?: number;
 }
 
 // Tipo auxiliar para trabajar con plantillas parseadas

@@ -1,5 +1,5 @@
-import { client, databases, DATABASE_ID, CLIENTS_COLLECTION_ID, CAMPAIGNS_COLLECTION_ID, TEMPLATES_COLLECTION_ID, CONFIG_COLLECTION_ID, IMPORT_LOGS_COLLECTION_ID } from './appwrite';
-import { ID, Permission, Role } from 'appwrite';
+import { DATABASE_ID, CLIENTS_COLLECTION_ID, CAMPAIGNS_COLLECTION_ID, TEMPLATES_COLLECTION_ID, CONFIG_COLLECTION_ID, IMPORT_LOGS_COLLECTION_ID } from './appwrite';
+import { Permission, Role } from 'appwrite';
 import { toast } from '@/hooks/use-toast';
 
 // Define la estructura de la base de datos
@@ -99,12 +99,6 @@ export const schema = {
       ],
     },
   ],
-};
-
-// Función para crear un atributo si no existe (no se usará directamente desde el frontend para la creación de esquema)
-const createAttributeIfNotExists = async (collectionId: string, attribute: any) => {
-  console.warn(`Intento de crear atributo '${attribute.key}' en '${collectionId}' desde el frontend. Esta operación no es compatible.`);
-  // Aquí se podría añadir lógica para llamar a una Appwrite Function si fuera necesario
 };
 
 // Función principal para configurar la base de datos (ahora solo informativa)

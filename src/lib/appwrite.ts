@@ -45,6 +45,7 @@ export const SESIONES_CLINICAS_COLLECTION_ID = 'sesiones_clinicas';
 export const NOTIFICACIONES_COLLECTION_ID = 'notificaciones';
 export const PERMISOS_COLLECTION_ID = 'permisos';
 export const PLANTILLAS_DOCUMENTOS_COLLECTION_ID = 'plantillas_documentos';
+export const AUDITORIA_COLLECTION_ID = 'auditoria';
 
 // Buckets de almacenamiento para datos clínicos
 export const DOCUMENTOS_FIRMADOS_BUCKET_ID = 'documentos_firmados_bucket';

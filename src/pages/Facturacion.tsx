@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useGetFacturas, useCreateFactura, useUpdateFactura } from '@/hooks/useFacturas';
 import { useGetConfiguration, useGenerarSiguienteNumero } from '@/hooks/useConfiguration'; // <-- Nombre corregido
-import { Factura, FacturaInputData, CreateFacturaInput, UpdateFacturaInput, Configuracion, FacturaConDatos, LineaFactura } from '@/types'; // Importar Configuracion
+import { Factura, FacturaInputData, CreateFacturaInput, UpdateFacturaInput, FacturaConDatos, LineaFactura } from '@/types';
 import { Models } from 'appwrite';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

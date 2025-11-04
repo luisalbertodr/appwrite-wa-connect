@@ -48,32 +48,31 @@ const initialTemplateState: TemplateInput = {
 
 const Marketing = () => {
   const [_filters, _setFilters] = useState({ edadMin: '', edadMax: '', facturacionMin: '', facturacionMax: '', intereses: '', sexo: '' });
-  const [searchQuery, setSearchQuery] = useState("");
-  const { data: clientesData } = useGetClientes(searchQuery);
+  const [searchQuery, _setSearchQuery] = useState("");
+  const { data: _clientesData } = useGetClientes(searchQuery);
   const { mutateAsync: updateClientMutation } = useUpdateCliente();
 
   const { loading: loadingTemplates, reload: reloadTemplates } = useAppwriteCollection<Template>(TEMPLATES_COLLECTION_ID);
   const { loading: loadingCampaigns, reload: reloadCampaigns } = useAppwriteCollection<Campaign>(CAMPAIGNS_COLLECTION_ID);
-  const { data: configs } = useAppwriteCollection<WahaConfig>(WAHA_CONFIG_COLLECTION_ID);
+  const { data: _configs } = useAppwriteCollection<WahaConfig>(WAHA_CONFIG_COLLECTION_ID);
   const { toast } = useToast();
 
-  // Usamos el tipo TemplateInput para el estado
-  const [newTemplate, setNewTemplate] = useState<TemplateInput>(initialTemplateState);
-  const [selectedTemplateId, setSelectedTemplateId] = useState<string>('');
-  const [isSending, setIsSending] = useState(false);
-  const [activeCampaignId, setActiveCampaignId] = useState<string | null>(null);
-  const [progress, setProgress] = useState<Progress>({ sent: 0, failed: 0, skipped: 0, total: 0 });
-  const [selectedClients, setSelectedClients] = useState<Map<string, Cliente>>(new Map());
+  const [newTemplate, _setNewTemplate] = useState<TemplateInput>(initialTemplateState);
+  const [selectedTemplateId, _setSelectedTemplateId] = useState<string>('');
+  const [isSending, _setIsSending] = useState(false);
+  const [activeCampaignId, _setActiveCampaignId] = useState<string | null>(null);
+  const [progress, _setProgress] = useState<Progress>({ sent: 0, failed: 0, skipped: 0, total: 0 });
+  const [selectedClients, _setSelectedClients] = useState<Map<string, Cliente>>(new Map());
 
-  const [scheduledDate, setScheduledDate] = useState('');
-  const [scheduledTime, setScheduledTime] = useState('');
-  const [startTime, setStartTime] = useState('');
-  const [endTime, setEndTime] = useState('');
-  const [editingClient, setEditingClient] = useState<(Cliente & Models.Document) | null>(null);
+  const [scheduledDate, _setScheduledDate] = useState('');
+  const [scheduledTime, _setScheduledTime] = useState('');
+  const [startTime, _setStartTime] = useState('');
+  const [endTime, _setEndTime] = useState('');
+  const [editingClient, _setEditingClient] = useState<(Cliente & Models.Document) | null>(null);
 
-  const [campaignProgress, setCampaignProgress] = useState<CampaignProgress | null>(null);
-  const [showLogDialog, setShowLogDialog] = useState(false);
-  const [logContent, setLogContent] = useState<Models.Document[]>([]);
+  const [campaignProgress, _setCampaignProgress] = useState<CampaignProgress | null>(null);
+  const [showLogDialog, _setShowLogDialog] = useState(false);
+  const [logContent, _setLogContent] = useState<Models.Document[]>([]);
 
 
 

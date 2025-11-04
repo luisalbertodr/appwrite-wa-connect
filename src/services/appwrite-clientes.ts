@@ -5,14 +5,6 @@ import { ID, Query, Models } from 'appwrite';
 // --- Funciones de Serialización para historial_citas ---
 
 /**
- * Serializa el array de historial de citas a JSON string para Appwrite
- */
-const serializeHistorialCitas = (historial: HistorialCita[] | undefined): string | undefined => {
-  if (!historial || historial.length === 0) return undefined;
-  return JSON.stringify(historial);
-};
-
-/**
  * Deserializa el JSON string de historial de citas de Appwrite a array
  */
 const deserializeHistorialCitas = (historialString: string | undefined): HistorialCita[] => {

@@ -33,7 +33,6 @@ import { cn } from '@/lib/utils';
 const BigCalendar = withDragAndDrop<CalendarEvent>(BigCalendarBase);
 
 import { Users, ChevronLeft, ChevronRight, CalendarDays, CalendarRange } from 'lucide-react';
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 import {
   DropdownMenu,

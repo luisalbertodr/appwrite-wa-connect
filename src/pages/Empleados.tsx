@@ -1,19 +1,17 @@
 import { useState } from 'react';
-import { useGetEmpleados, useCreateEmpleado, useUpdateEmpleado, useDeleteEmpleado } from '@/hooks/useEmpleados'; // Importar hooks CRUD
+import { useGetEmpleados, useCreateEmpleado, useUpdateEmpleado } from '@/hooks/useEmpleados'; // Importar hooks CRUD
 import { Empleado, LipooutUserInput } from '@/types'; // Importar tipo Input
 import { Models } from 'appwrite';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, MoreHorizontal, Edit, Trash2, UserX, UserCheck } from 'lucide-react'; // Añadir iconos estado
-import LoadingSpinner from '@/components/LoadingSpinner';
+import { PlusCircle, MoreHorizontal, Edit, UserX, UserCheck } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
-  DropdownMenuSeparator
+  DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
 import {
   Dialog,
@@ -25,7 +23,7 @@ import { EmpleadoForm } from '@/components/forms/EmpleadoForm'; // <-- Importar 
 import { useToast } from '@/hooks/use-toast';
 
 const Empleados = () => {
-  const { data: empleados, isLoading, error, refetch: refetchEmpleados } = useGetEmpleados(false); // Traer todos (activos e inactivos)
+  const { data: empleados, isLoading, error } = useGetEmpleados(false); // Traer todos (activos e inactivos)
   const createEmpleadoMutation = useCreateEmpleado();
   const updateEmpleadoMutation = useUpdateEmpleado();
   // El hook deleteEmpleado elimina permanentemente, usaremos update para activar/desactivar

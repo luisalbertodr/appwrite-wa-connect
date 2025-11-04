@@ -1,8 +1,7 @@
 import { databases, DATABASE_ID, CITAS_COLLECTION_ID, CLIENTES_COLLECTION_ID } from '@/lib/appwrite';
 import { Cita, CitaInput, LipooutUserInput, Cliente, HistorialCita } from '@/types';
 import { ID, Query, Models } from 'appwrite';
-// CORRECCIÓN: Importar 'addDays' y funciones de semana
-import { startOfDay, endOfDay, formatISO, addDays, startOfWeek, endOfWeek } from 'date-fns';
+import { startOfDay, formatISO, addDays, startOfWeek } from 'date-fns';
 import { updateCliente } from './appwrite-clientes';
 
 // Tipos Create/Update Input (Asegúrate que coincidan con tu definición)

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, ChangeEvent } from 'react';
 import { useAppwriteCollection } from '@/hooks/useAppwrite';
 import { WahaConfig, LipooutUserInput } from '@/types';
-import type { Configuracion, Empleado, Recurso, Proveedor, Familia } from '@/types';
+import type { Configuracion, Empleado, Recurso, Proveedor } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,8 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Upload, Loader2, Save, Settings, Server, Users, Package, Wrench, Building2, Plus, Pencil, Trash2, Moon, Sun, Monitor, Shield, PackageOpen } from 'lucide-react';
-import { useTheme } from '@/components/theme-provider';
+import { Upload, Loader2, Save, Settings, Server, Users, Package, Building2, Plus, Pencil, Trash2, Moon, Shield, PackageOpen } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { ConfigurationForm } from '@/components/forms/ConfigurationForm';

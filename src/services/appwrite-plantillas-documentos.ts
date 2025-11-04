@@ -127,7 +127,7 @@ export async function createPlantilla(plantilla: PlantillaDocumentoInput): Promi
       archivo_base_id: plantilla.archivo_base_id || null,
       activa: plantilla.activa !== undefined ? plantilla.activa : true,
       requiere_firma: plantilla.requiere_firma !== undefined ? plantilla.requiere_firma : true,
-      version: plantilla.version || 1
+      version: plantilla.version || '1.0'
     };
 
     const response = await databases.createDocument(
@@ -331,7 +331,7 @@ export async function duplicarPlantilla(
       archivo_base_id: plantillaOriginal.archivo_base_id,
       activa: false, // La copia empieza desactivada por seguridad
       requiere_firma: plantillaOriginal.requiere_firma,
-      version: 1 // Nueva versión empieza en 1
+      version: '1' // Nueva versión empieza en '1' como string
     };
 
     return await createPlantilla(nuevaPlantilla);

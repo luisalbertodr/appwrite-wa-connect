@@ -295,8 +295,8 @@ const TPV = () => {
                                <TableHead className="w-10"></TableHead>
                            </TableRow>
                        </TableHeader>
-                       <TableBody>
-                           {lineas.map((linea: LineaFactura) => (
+                        <TableBody>
+                            {lineas.map((linea) => (
                                <TableRow key={linea.id}>
                                    <TableCell className="font-medium truncate">
                                        {linea.articulo?.nombre ?? <span className="text-destructive">Sin artículo</span>}
