@@ -1,4 +1,4 @@
-import { LogOut, User, Settings, Home, Calendar, Users, Archive, ShoppingCart, BarChart3 } from 'lucide-react';
+import { LogOut, User, Settings, Home, Calendar, Users, Archive, ShoppingCart, BarChart3, Mail, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -23,6 +23,8 @@ const navItems = [
   { href: '/articulos', label: 'Artículos', icon: Archive },
   { href: '/tpv', label: 'TPV', icon: ShoppingCart },
   { href: '/facturacion', label: 'Facturas', icon: BarChart3 },
+  { href: '/marketing', label: 'Marketing', icon: Mail },
+  { href: '/marketing-waha', label: 'Marketing WhatsApp', icon: MessageCircle },
   { href: '/configuracion', label: 'Ajustes', icon: Settings },
 ];
 
