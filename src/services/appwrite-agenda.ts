@@ -331,7 +331,7 @@ export const deleteCita = async (id: string): Promise<void> => {
                 await updateCliente({
                     $id: cliente.$id,
                     data: {
-                        historial_citas: JSON.stringify(nuevoHistorial)
+                        historial_citas: JSON.stringify(nuevoHistorial) as any
                     }
                 });
                 
