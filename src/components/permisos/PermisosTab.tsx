@@ -242,12 +242,14 @@ export const PermisosTab = () => {
     return empleado ? `${empleado.nombre} ${empleado.apellidos}` : 'Desconocido';
   };
 
-  const getRolBadgeVariant = (rol: RolEmpleado): "default" | "secondary" | "outline" | "destructive" => {
+  const getRolBadgeVariant = (rol: RolEmpleado): "default" | "secondary" | "outline" | "destructive" | undefined => {
     switch (rol) {
       case 'Admin': return 'default';
       case 'Médico': return 'secondary';
       case 'Recepción': return 'outline';
       case 'Lectura': return 'secondary';
+      case 'Esteticista': return 'outline';
+      default: return undefined;
     }
   };
 

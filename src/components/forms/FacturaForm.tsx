@@ -70,7 +70,7 @@ export const FacturaForm = ({ facturaInicial, onSubmit, isSubmitting }: FacturaF
       fechaEmision: facturaInicial.fechaEmision,
       fechaVencimiento: facturaInicial.fechaVencimiento || null,
       estado: facturaInicial.estado,
-      cliente_id: typeof facturaInicial.cliente === 'object' ? facturaInicial.cliente.$id : facturaInicial.cliente_id,
+      cliente_id: facturaInicial.cliente_id,
       empleado_id: facturaInicial.empleado_id || null,
       lineas: lineasParsed,
       descuentoGlobalPorcentaje: facturaInicial.descuentoGlobalPorcentaje || 0,

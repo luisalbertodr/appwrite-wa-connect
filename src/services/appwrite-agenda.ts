@@ -319,18 +319,19 @@ export const deleteCita = async (id: string): Promise<void> => {
                 // 5. Deserializar historial del cliente con fallback
                 let historialActual: HistorialCita[] = [];
                 try {
-                    historialActual = JSON.parse(cliente.historial_citas || '[]');
+                    const historialString = cliente.historial_citas || '[]';
+                    historialActual = typeof historialString === 'string' ? JSON.parse(historialString) : historialString;
                 } catch (error) {
                     console.error('Error deserializando historial_citas:', error);
                     historialActual = [];
                 }
                 const nuevoHistorial = [...historialActual, entradaHistorial];
                 
-                // 6. Actualizar el cliente con el nuevo historial
+                // 6. Actualizar el cliente con el nuevo historial (serializar a JSON string)
                 await updateCliente({
                     $id: cliente.$id,
                     data: {
-                        historial_citas: nuevoHistorial
+                        historial_citas: JSON.stringify(nuevoHistorial)
                     }
                 });
                 

@@ -7,7 +7,7 @@ import LoadingSpinner from '../LoadingSpinner';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Package, FileText, Clock } from 'lucide-react';
-import { Separator } from '@/components/ui/separator';
+
 import type { BonoCliente } from '@/types/bono.types';
 import type { Factura } from '@/types/factura.types';
 import type { Models } from 'appwrite';
@@ -36,7 +36,7 @@ export const HistorialComprasTab = ({ clienteId }: HistorialComprasTabProps) => 
         fecha: parseISO(bono.fecha_compra),
         descripcion: bono.bono_nombre,
         total: bono.precio_pagado,
-        estado: bono.estado,
+        estado: bono.activo ? 'activo' : 'inactivo',
         data: bono
       });
     });

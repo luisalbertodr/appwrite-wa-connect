@@ -3,7 +3,7 @@ import { ID, Permission, Role } from 'appwrite';
 import { toast } from '@/hooks/use-toast';
 
 // Define la estructura de la base de datos
-const schema = {
+export const schema = {
   databaseId: DATABASE_ID,
   collections: [
     {

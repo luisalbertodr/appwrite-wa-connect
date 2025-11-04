@@ -11,7 +11,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useGetFamilias } from '@/hooks/useArticulos';
-import LoadingSpinner from '../LoadingSpinner';
 
 interface ArticuloFormProps {
   articuloInicial?: (Articulo & Models.Document) | null;

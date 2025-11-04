@@ -32,10 +32,8 @@ import { cn } from '@/lib/utils';
 
 const BigCalendar = withDragAndDrop<CalendarEvent>(BigCalendarBase);
 
-// --- MODIFICACIÓN: Iconos y ToggleGroup añadidos ---
 import { Users, ChevronLeft, ChevronRight, CalendarDays, CalendarRange } from 'lucide-react';
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
-// --- FIN MODIFICACIÓN ---
 
 import {
   DropdownMenu,

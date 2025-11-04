@@ -88,7 +88,7 @@ export const AgendaCalendarView = ({
         }}
         // --- PROPS DE RECURSOS ---
         resources={resources}
-        resourceAccessor="resource.empleadoId" // Le decimos que mire dentro del objeto
+        resourceAccessor={(event: CalendarEvent) => event.resource?.empleadoId}
         resourceTitleAccessor="title" // El 'title' de tu CalendarResource
         // --- FIN DE PROPS DE RECURSOS ---
       />

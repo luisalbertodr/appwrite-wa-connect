@@ -6,9 +6,8 @@ import {
   updateCita,
   deleteCita,
 } from '../services/appwrite-agenda'; // Asumiendo que las funciones CRUD están aquí
-import { Cita, CitaInput, LipooutUserInput } from '@/types'; // Asegúrate de importar los tipos necesarios
-import { Models } from 'appwrite';
-import { format, startOfDay, parseISO, startOfWeek } from 'date-fns'; // Importar date-fns
+import { CitaInput, LipooutUserInput } from '@/types'; // Asegúrate de importar los tipos necesarios
+import { format, startOfDay, startOfWeek } from 'date-fns'; // Importar date-fns
 
 // --- CLAVE BASE PARA LAS QUERIES DE CITAS ---
 export const CITAS_QUERY_KEY = 'citas';
@@ -130,7 +129,7 @@ export const useDeleteCita = () => {
   return useMutation({
     // Modificado para aceptar un objeto con id y opcionalmente fechaCita
     mutationFn: ({ id/*, fechaCita */}: { id: string; fechaCita?: string }) => deleteCita(id),
-    onSuccess: (_, variables) => { // El primer argumento es void (delete no devuelve datos), el segundo son las variables {id, fechaCita}
+    onSuccess: () => { // El primer argumento es void (delete no devuelve datos)
       // Invalidar para refrescar la vista
       queryClient.invalidateQueries({ queryKey: [CITAS_QUERY_KEY] });
 

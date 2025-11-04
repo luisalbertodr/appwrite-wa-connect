@@ -36,7 +36,7 @@ export const useUpdateFactura = () => {
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: UpdateFacturaInput }) =>
       updateFactura(id, data),
-    onSuccess: (_, variables) => {
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [FACTURAS_QUERY_KEY] });
     },
   });

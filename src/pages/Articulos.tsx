@@ -8,7 +8,7 @@ import { MoreHorizontal, PlusCircle } from 'lucide-react';
 // --- *** INICIO CORRECCIÓN *** ---
 import { useArticulos } from '@/hooks/useArticulos'; // Importación nombrada (CORRECTA)
 // --- *** FIN CORRECCIÓN *** ---
-import { TArticulo } from '@/types/articulo.types'; // Tipo de dato para Articulo
+import { Articulo } from '@/types/articulo.types'; // Tipo de dato para Articulo
 import { ArticuloForm } from '@/components/forms/ArticuloForm'; // Importación nombrada (ya corregida antes)
 import LoadingSpinner from '@/components/LoadingSpinner'; // Indicador de carga
 import { toast } from '@/components/ui/use-toast'; // Para mostrar notificaciones
@@ -27,14 +27,14 @@ import {
 function Articulos() {
   // Estado y hooks
   const { articulos, isLoading, error, createArticulo, updateArticulo, deleteArticulo } = useArticulos(); // Hook para datos de artículos
-  const [selectedArticulo, setSelectedArticulo] = useState<TArticulo | null>(null); // Artículo seleccionado para editar
+  const [selectedArticulo, setSelectedArticulo] = useState<Articulo | null>(null); // Artículo seleccionado para editar
   const [isSheetOpen, setIsSheetOpen] = useState(false); // Controla si el panel lateral (Sheet) está abierto
   const [isSubmitting, setIsSubmitting] = useState(false); // Estado de envío del formulario
 
   // --- Manejadores de eventos ---
 
   // Abre el Sheet con los datos del artículo para editarlo
-  const handleEdit = (articulo: TArticulo) => {
+  const handleEdit = (articulo: Articulo) => {
     setSelectedArticulo(articulo);
     setIsSheetOpen(true);
   };

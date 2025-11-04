@@ -174,20 +174,16 @@ export const createCliente = (newCliente: CreateClienteInput) => {
 
 // ACTUALIZAR Cliente
 export const updateCliente = async ({ $id, data }: { $id: string, data: UpdateClienteInput }) => {
-  // Serializar historial_citas si está presente
-  const dataToSend: any = { ...data };
-  if (data.historial_citas !== undefined) {
-    dataToSend.historial_citas = serializeHistorialCitas(data.historial_citas);
-  }
-  
+  // historial_citas ya viene como string JSON desde el caller, no necesita serialización adicional
   const result = await databases.updateDocument<Cliente & Models.Document>(
     DATABASE_ID,
     CLIENTES_COLLECTION_ID,
     $id,
-    dataToSend
+    data
   );
   
-  return processClienteDocument(result);
+  // No procesamos el documento para mantener historial_citas como string
+  return result as Cliente & Models.Document;
 };
 
 // ELIMINAR Cliente

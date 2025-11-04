@@ -1,5 +1,5 @@
 import { databases, DATABASE_ID, FACTURAS_COLLECTION_ID } from '@/lib/appwrite';
-import { Factura, FacturaInputData, CreateFacturaInput, UpdateFacturaInput, Cliente } from '@/types';
+import { Factura, CreateFacturaInput, UpdateFacturaInput, Cliente } from '@/types';
 import { ID, Query, Models } from 'appwrite';
 import { getClientesByNombre } from '@/services/appwrite-clientes'; // Importar servicio de clientes
 

@@ -33,9 +33,8 @@ export const useAgendaCalendar = (fechaInicio: Date, fechaFin: Date) => {
     const cliente = clientes?.find(c => c.$id === cita.cliente_id);
     const clienteNombre = cliente?.nombre_completo || cliente?.nomcli || 'Cliente desconocido';
 
-    // Buscar nombre del empleado (el tipo Empleado tiene 'nombre')
+    // Buscar nombre del empleado
     const empleado = empleados?.find(e => e.$id === cita.empleado_id);
-    const empleadoNombre = empleado?.nombre || 'Empleado desconocido';
 
     return {
       id: cita.$id,

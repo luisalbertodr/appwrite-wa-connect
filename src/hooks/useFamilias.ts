@@ -6,8 +6,6 @@ import {
   deleteFamilia,
   FamiliaInput 
 } from '@/services/appwrite-articulos';
-import { Familia } from '@/types';
-import { Models } from 'appwrite';
 import { useToast } from '@/hooks/use-toast';
 
 export const useFamilias = () => {
