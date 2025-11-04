@@ -394,28 +394,47 @@ All colors MUST be HSL.
 
 /* ===================================
    Configuración personalizada: 
-   Ocultar domingo en vista semanal
+   Mostrar semana completa (Lunes-Domingo)
    =================================== */
 
-/* Header de la semana - ocultar domingo */
-.rbc-time-header-content .rbc-header:first-child {
-  display: none;
-}
-
-/* Columna de time slots del domingo */
-.rbc-time-content > .rbc-day-slot:first-child {
-  display: none;
-}
-
-/* Asegurar que el ancho se distribuya correctamente entre 6 días (lunes-sábado) */
+/* Asegurar que el ancho se distribuya correctamente entre 7 días (lunes-domingo) */
 .rbc-time-header-content {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(7, 1fr);
 }
 
 .rbc-time-content {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
+  grid-template-columns: repeat(7, 1fr);
+}
+
+/* Estilos para header de recursos (nombres de empleados) */
+.rbc-time-header-content .rbc-row.rbc-row-resource {
+  border-bottom: 2px solid hsl(var(--border));
+}
+
+.rbc-time-header-content .rbc-header {
+  font-size: 0.875rem;
+  font-weight: 600;
+  padding: 12px 4px;
+  background-color: hsl(var(--muted) / 0.5);
+  border-left: 1px solid hsl(var(--calendar-border));
+}
+
+.rbc-time-header-content .rbc-header:first-child {
+  border-left: none;
+}
+
+/* Destacar el día actual en el header */
+.rbc-time-header-content .rbc-today {
+  background-color: hsl(var(--primary) / 0.1);
+  font-weight: 700;
+}
+
+/* Mejorar la visualización del domingo */
+.rbc-time-header-content .rbc-header:last-child,
+.rbc-day-slot:last-child {
+  border-right: 1px solid hsl(var(--calendar-border));
 }
 
 /* ===================================
