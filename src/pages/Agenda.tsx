@@ -3,15 +3,19 @@ import { Calendar, dateFnsLocalizer, View } from 'react-big-calendar';
 import { format, parse, startOfWeek, getDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import 'react-big-calendar/lib/css/react-big-calendar.css';
-import { Calendar as CalendarIcon, Plus } from 'lucide-react';
-import { useGetCitasPorSemana } from '@/hooks/useAgenda';
+import { Calendar as CalendarIcon, Plus, Pencil, Trash2 } from 'lucide-react';
+import { useGetCitasPorSemana, useCreateCita, useUpdateCita, useDeleteCita } from '@/hooks/useAgenda';
 import { useGetEmpleados } from '@/hooks/useEmpleados';
 import { useGetClientes } from '@/hooks/useClientes';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import LoadingSpinner from '@/components/LoadingSpinner';
-import { Cita } from '@/types';
+import { CitaForm } from '@/components/forms/CitaForm';
+import { Cita, CitaInput } from '@/types';
 import { Models } from 'appwrite';
+import { toast } from 'sonner';
 
 const locales = {
   es: es,
@@ -36,10 +40,17 @@ interface CalendarEvent {
 const Agenda = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [view, setView] = useState<View>('week');
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedCita, setSelectedCita] = useState<(Cita & Models.Document) | null>(null);
+  const [defaultFechaHora, setDefaultFechaHora] = useState<Date | undefined>();
 
   const { data: citas, isLoading: loadingCitas } = useGetCitasPorSemana(selectedDate);
   const { data: empleados } = useGetEmpleados(true);
   const { data: clientes } = useGetClientes('');
+  const createMutation = useCreateCita();
+  const updateMutation = useUpdateCita();
+  const deleteMutation = useDeleteCita();
 
   const events: CalendarEvent[] = useMemo(() => {
     if (!citas) return [];
@@ -78,13 +89,57 @@ const Agenda = () => {
   };
 
   const handleSelectSlot = ({ start }: { start: Date }) => {
-    console.log('Nueva cita en:', start);
-    // TODO: Abrir modal para crear cita
+    setDefaultFechaHora(start);
+    setSelectedCita(null);
+    setIsDialogOpen(true);
   };
 
   const handleSelectEvent = (event: CalendarEvent) => {
-    console.log('Editar cita:', event.resource);
-    // TODO: Abrir modal para editar cita
+    setSelectedCita(event.resource);
+    setDefaultFechaHora(undefined);
+    setIsDialogOpen(true);
+  };
+
+  const handleSubmit = async (data: CitaInput) => {
+    try {
+      if (selectedCita) {
+        await updateMutation.mutateAsync({ id: selectedCita.$id, data });
+        toast.success('Cita actualizada correctamente');
+      } else {
+        await createMutation.mutateAsync(data);
+        toast.success('Cita creada correctamente');
+      }
+      setIsDialogOpen(false);
+      setSelectedCita(null);
+    } catch (error) {
+      toast.error('Error al guardar la cita');
+      console.error(error);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!selectedCita) return;
+    
+    try {
+      await deleteMutation.mutateAsync(selectedCita.$id);
+      toast.success('Cita eliminada correctamente');
+      setIsDeleteDialogOpen(false);
+      setSelectedCita(null);
+    } catch (error) {
+      toast.error('Error al eliminar la cita');
+      console.error(error);
+    }
+  };
+
+  const handleCloseDialog = () => {
+    setIsDialogOpen(false);
+    setSelectedCita(null);
+    setDefaultFechaHora(undefined);
+  };
+
+  const handleOpenDeleteDialog = () => {
+    setIsDialogOpen(false);
+    setIsDeleteDialogOpen(true);
   };
 
   if (loadingCitas) {
@@ -103,7 +158,11 @@ const Agenda = () => {
             Gestiona las citas y horarios del equipo
           </p>
         </div>
-        <Button>
+        <Button onClick={() => {
+          setDefaultFechaHora(new Date());
+          setSelectedCita(null);
+          setIsDialogOpen(true);
+        }}>
           <Plus className="h-4 w-4 mr-2" />
           Nueva Cita
         </Button>
@@ -165,6 +224,68 @@ const Agenda = () => {
           </div>
         </CardContent>
       </Card>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedCita ? 'Editar Cita' : 'Nueva Cita'}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedCita 
+                ? 'Modifica los datos de la cita existente'
+                : 'Completa los datos para agendar una nueva cita'
+              }
+            </DialogDescription>
+          </DialogHeader>
+          <CitaForm
+            cita={selectedCita ? {
+              fecha_hora: selectedCita.fecha_hora,
+              duracion: selectedCita.duracion,
+              cliente_id: selectedCita.cliente_id,
+              empleado_id: selectedCita.empleado_id,
+              articulos: selectedCita.articulos,
+              estado: selectedCita.estado,
+              comentarios: selectedCita.comentarios,
+              datos_clinicos: selectedCita.datos_clinicos,
+              precio_total: selectedCita.precio_total,
+            } : undefined}
+            defaultFechaHora={defaultFechaHora}
+            onSubmit={handleSubmit}
+            onCancel={handleCloseDialog}
+            isLoading={createMutation.isPending || updateMutation.isPending}
+          />
+          {selectedCita && (
+            <div className="flex justify-start pt-2 border-t">
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={handleOpenDeleteDialog}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Eliminar Cita
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. La cita será eliminada permanentemente.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };
