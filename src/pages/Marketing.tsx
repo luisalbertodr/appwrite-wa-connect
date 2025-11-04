@@ -57,21 +57,21 @@ const Marketing = () => {
   const { data: _configs } = useAppwriteCollection<WahaConfig>(WAHA_CONFIG_COLLECTION_ID);
   const { toast } = useToast();
 
-  const [newTemplate, _setNewTemplate] = useState<TemplateInput>(initialTemplateState);
-  const [selectedTemplateId, _setSelectedTemplateId] = useState<string>('');
-  const [isSending, _setIsSending] = useState(false);
+  const [_newTemplate, _setNewTemplate] = useState<TemplateInput>(initialTemplateState);
+  const [_selectedTemplateId, _setSelectedTemplateId] = useState<string>('');
+  const [_isSending, _setIsSending] = useState(false);
   const [activeCampaignId, _setActiveCampaignId] = useState<string | null>(null);
   const [progress, _setProgress] = useState<Progress>({ sent: 0, failed: 0, skipped: 0, total: 0 });
-  const [selectedClients, _setSelectedClients] = useState<Map<string, Cliente>>(new Map());
+  const [_selectedClients, _setSelectedClients] = useState<Map<string, Cliente>>(new Map());
 
-  const [scheduledDate, _setScheduledDate] = useState('');
-  const [scheduledTime, _setScheduledTime] = useState('');
-  const [startTime, _setStartTime] = useState('');
-  const [endTime, _setEndTime] = useState('');
-  const [editingClient, _setEditingClient] = useState<(Cliente & Models.Document) | null>(null);
+  const [_scheduledDate, _setScheduledDate] = useState('');
+  const [_scheduledTime, _setScheduledTime] = useState('');
+  const [_startTime, _setStartTime] = useState('');
+  const [_endTime, _setEndTime] = useState('');
+  const [editingClient, setEditingClient] = useState<(Cliente & Models.Document) | null>(null);
 
-  const [campaignProgress, _setCampaignProgress] = useState<CampaignProgress | null>(null);
-  const [showLogDialog, _setShowLogDialog] = useState(false);
+  const [_campaignProgress, _setCampaignProgress] = useState<CampaignProgress | null>(null);
+  const [showLogDialog, setShowLogDialog] = useState(false);
   const [logContent, _setLogContent] = useState<Models.Document[]>([]);
 
 
