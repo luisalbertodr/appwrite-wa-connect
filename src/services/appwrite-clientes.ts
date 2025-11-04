@@ -33,54 +33,8 @@ export type UpdateClienteInput = Partial<CreateClienteInput>;
 
 // --- Funciones de Servicio (Usadas por hooks y otros servicios) ---
 
-// OBTENER Clientes (con búsqueda por coincidencias parciales en múltiples campos)
+// OBTENER Clientes (con búsqueda usando índice fulltext de Appwrite)
 export const getClientesByNombre = async (searchQuery: string = ""): Promise<(Cliente & Models.Document)[]> => {
-    // Función de normalización mejorada: quita acentos y caracteres especiales
-    const normalizeText = (text: string | number | null | undefined): string => {
-        if (text === null || text === undefined) return '';
-        
-        return String(text)
-            .toLowerCase()
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '') // Eliminar acentos
-            .replace(/[\-().]/g, ''); // Eliminar guiones, paréntesis y puntos (mantener espacios)
-    };
-
-    // Función para verificar si un cliente coincide con la búsqueda
-    const clienteMatchesSearch = (cliente: Cliente & Models.Document, searchNormalized: string): boolean => {
-        // Buscar en nombre_completo
-        if (cliente.nombre_completo) {
-            const nombreNormalized = normalizeText(cliente.nombre_completo);
-            if (nombreNormalized.includes(searchNormalized)) return true;
-        }
-
-        // Buscar en email
-        if (cliente.email) {
-            const emailNormalized = normalizeText(cliente.email);
-            if (emailNormalized.includes(searchNormalized)) return true;
-        }
-
-        // Buscar en DNI
-        if (cliente.dnicli) {
-            const dniNormalized = normalizeText(cliente.dnicli);
-            if (dniNormalized.includes(searchNormalized)) return true;
-        }
-
-        // Buscar en teléfono 1
-        if (cliente.tel1cli) {
-            const tel1Normalized = normalizeText(cliente.tel1cli);
-            if (tel1Normalized.includes(searchNormalized)) return true;
-        }
-
-        // Buscar en teléfono 2
-        if (cliente.tel2cli) {
-            const tel2Normalized = normalizeText(cliente.tel2cli);
-            if (tel2Normalized.includes(searchNormalized)) return true;
-        }
-
-        return false;
-    };
-
     // Si no hay búsqueda, devolver los primeros 500
     if (!searchQuery || searchQuery.trim() === "") {
         const response = await databases.listDocuments<Cliente & Models.Document>(
@@ -91,67 +45,27 @@ export const getClientesByNombre = async (searchQuery: string = ""): Promise<(Cl
         return response.documents.map(processClienteDocument);
     }
 
-    // Con búsqueda: implementar paginación para buscar en toda la base de datos
-    const BATCH_SIZE = 4000; // Tamaño de cada lote (ajustado al límite real de Appwrite)
-    const MAX_RESULTS = 500; // Máximo de resultados a devolver
-    const searchNormalized = normalizeText(searchQuery);
+    // Con búsqueda: usar Query.search() con el índice fulltext
+    console.log(`[getClientesByNombre] Búsqueda con índice fulltext: "${searchQuery}"`);
     
-    console.log(`[getClientesByNombre] Iniciando búsqueda: "${searchQuery}" (normalizado: "${searchNormalized}")`);
-    
-    const results: (Cliente & Models.Document)[] = [];
-    let offset = 0;
-    let hasMoreData = true;
-
-    // Iterar por lotes hasta encontrar suficientes resultados o llegar al final
-    while (hasMoreData && results.length < MAX_RESULTS) {
+    try {
         const response = await databases.listDocuments<Cliente & Models.Document>(
             DATABASE_ID,
             CLIENTES_COLLECTION_ID,
             [
-                Query.limit(BATCH_SIZE),
-                Query.offset(offset),
+                Query.search('nombre_completo', searchQuery), // Usar índice fulltext
+                Query.limit(500),
                 Query.orderDesc('$createdAt')
             ]
         );
 
-        // Si no hay más documentos, terminar
-        if (response.documents.length === 0) {
-            console.log(`[getClientesByNombre] No hay más documentos en offset ${offset}`);
-            hasMoreData = false;
-            break;
-        }
-
-        console.log(`[getClientesByNombre] Lote ${Math.floor(offset / BATCH_SIZE) + 1}: ${response.documents.length} documentos obtenidos`);
-
-        // Filtrar el lote actual
-        const matchingClientes = response.documents.filter(cliente => 
-            clienteMatchesSearch(cliente, searchNormalized)
-        );
-
-        console.log(`[getClientesByNombre] Coincidencias en este lote: ${matchingClientes.length}`);
-
-        // Agregar resultados sin exceder el máximo
-        const remainingSlots = MAX_RESULTS - results.length;
-        results.push(...matchingClientes.slice(0, remainingSlots));
-
-        console.log(`[getClientesByNombre] Total de resultados acumulados: ${results.length}/${MAX_RESULTS}`);
-
-        // Continuar al siguiente lote
-        offset += BATCH_SIZE;
-        
-        // Solo detenerse cuando no hay más documentos
-        if (response.documents.length === 0) {
-            console.log(`[getClientesByNombre] Fin de datos alcanzado (no hay más documentos)`);
-            hasMoreData = false;
-        } else if (offset >= 50000) {
-            // Límite de seguridad para evitar bucles infinitos (ajustar según necesidad)
-            console.log(`[getClientesByNombre] Límite de seguridad alcanzado (offset: ${offset})`);
-            hasMoreData = false;
-        }
+        console.log(`[getClientesByNombre] Resultados encontrados: ${response.documents.length}`);
+        return response.documents.map(processClienteDocument);
+    } catch (error) {
+        console.error('[getClientesByNombre] Error en búsqueda fulltext:', error);
+        // Fallback: si hay error, devolver array vacío
+        return [];
     }
-
-    console.log(`[getClientesByNombre] Búsqueda completada: ${results.length} resultados encontrados`);
-    return results.map(processClienteDocument);
 };
 
 // CREAR Cliente

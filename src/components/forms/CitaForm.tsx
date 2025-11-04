@@ -96,6 +96,9 @@ export const CitaForm = ({ citaInicial, fechaInicial, empleadoInicial, onSubmit,
   const [searchDni, setSearchDni] = useState('');
   const [articuloSearch, setArticuloSearch] = useState('');
   
+  // Estado para debounce de búsqueda
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  
   const [nombrePopoverOpen, setNombrePopoverOpen] = useState(false);
   const [tel1PopoverOpen, setTel1PopoverOpen] = useState(false);
   const [tel2PopoverOpen, setTel2PopoverOpen] = useState(false);
@@ -130,9 +133,19 @@ export const CitaForm = ({ citaInicial, fechaInicial, empleadoInicial, onSubmit,
   const [nuevoTiempo, setNuevoTiempo] = useState({ nombre: '', duracion: 30 });
   const [mostrarDatosClinicos, setMostrarDatosClinicos] = useState(false);
 
+  // Efecto para debounce de búsqueda (300ms de delay)
+  useEffect(() => {
+    const searchQuery = searchNombre || searchTel1 || searchTel2 || searchEmail || searchDni || '';
+    
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300); // 300ms de delay
+    
+    return () => clearTimeout(timer);
+  }, [searchNombre, searchTel1, searchTel2, searchEmail, searchDni]);
+
   // --- Carga de datos para selectores ---
-  const searchQuery = searchNombre || searchTel1 || searchTel2 || searchEmail || searchDni || '';
-  const { data: clientes, isLoading: loadingClientes } = useGetClientes(searchQuery);
+  const { data: clientes, isLoading: loadingClientes } = useGetClientes(debouncedSearchQuery);
   const { data: articulos, isLoading: loadingArticulos } = useGetArticulos();
   const { data: empleados, isLoading: loadingEmpleados } = useGetEmpleados(true);
 
@@ -267,17 +280,6 @@ export const CitaForm = ({ citaInicial, fechaInicial, empleadoInicial, onSubmit,
     form.setValue('precio_total', total);
   }, [articulosProgramados, form]);
 
-  // --- Función de normalización (igual que en el servicio) ---
-  const normalizeText = (text: string | number | null | undefined): string => {
-    if (text === null || text === undefined) return '';
-    
-    return String(text)
-      .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '') // Eliminar acentos
-      .replace(/[\-().]/g, ''); // Eliminar guiones, paréntesis y puntos
-  };
-
   // --- Lógica de Búsqueda y Selección ---
   const clienteSeleccionadoId = form.watch('cliente_id');
   const clienteActual = useMemo(() => {
@@ -292,51 +294,14 @@ export const CitaForm = ({ citaInicial, fechaInicial, empleadoInicial, onSubmit,
   const valorEmail = clienteActual?.email || 'Buscar por email...';
   const valorDni = clienteActual?.dnicli || 'Buscar por DNI...';
 
-  // Filtrar clientes por cada campo con normalización
-  const clientesPorNombre = useMemo(() => {
-    if (!searchNombre || !clientes) return clientes;
-    const searchNormalized = normalizeText(searchNombre);
-    return clientes.filter(c => {
-      const nombreNormalized = normalizeText(c.nombre_completo);
-      return nombreNormalized.includes(searchNormalized);
-    });
-  }, [clientes, searchNombre]);
-
-  const clientesPorTel1 = useMemo(() => {
-    if (!searchTel1 || !clientes) return clientes;
-    const searchNormalized = normalizeText(searchTel1);
-    return clientes.filter(c => {
-      const tel1Normalized = normalizeText(c.tel1cli);
-      return tel1Normalized.includes(searchNormalized);
-    });
-  }, [clientes, searchTel1]);
-
-  const clientesPorTel2 = useMemo(() => {
-    if (!searchTel2 || !clientes) return clientes;
-    const searchNormalized = normalizeText(searchTel2);
-    return clientes.filter(c => {
-      const tel2Normalized = normalizeText(c.tel2cli);
-      return tel2Normalized.includes(searchNormalized);
-    });
-  }, [clientes, searchTel2]);
-
-  const clientesPorEmail = useMemo(() => {
-    if (!searchEmail || !clientes) return clientes;
-    const searchNormalized = normalizeText(searchEmail);
-    return clientes.filter(c => {
-      const emailNormalized = normalizeText(c.email);
-      return emailNormalized.includes(searchNormalized);
-    });
-  }, [clientes, searchEmail]);
-
-  const clientesPorDni = useMemo(() => {
-    if (!searchDni || !clientes) return clientes;
-    const searchNormalized = normalizeText(searchDni);
-    return clientes.filter(c => {
-      const dniNormalized = normalizeText(c.dnicli);
-      return dniNormalized.includes(searchNormalized);
-    });
-  }, [clientes, searchDni]);
+  // Los clientes ya vienen filtrados del backend usando el índice fulltext
+  // No necesitamos filtrar localmente
+  const clientesFiltrados = clientes || [];
+  const clientesPorNombre = clientesFiltrados;
+  const clientesPorTel1 = clientesFiltrados;
+  const clientesPorTel2 = clientesFiltrados;
+  const clientesPorEmail = clientesFiltrados;
+  const clientesPorDni = clientesFiltrados;
 
   // Función para seleccionar un cliente (sincroniza todos los campos)
   const seleccionarCliente = (clienteId: string) => {

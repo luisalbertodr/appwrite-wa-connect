@@ -618,7 +618,7 @@ const Agenda = () => {
 
       const cliente = clienteMap.get(cita.cliente_id);
       const clienteNombreCompleto = cliente?.nombre_completo || `${cliente?.nomcli || ''} ${cliente?.ape1cli || ''}`.trim();
-      const clienteInfo = `${clienteNombreCompleto || 'Cliente?'} (${cliente?.tel1cli || 'Sin Tlf'})`;
+      const clienteInfo = `${clienteNombreCompleto || 'Cliente?'} (${cliente?.tel2cli || 'Sin Tlf'})`;
 
       let tratamientos = 'Sin tratamientos';
       try {
