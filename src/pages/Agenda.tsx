@@ -821,6 +821,20 @@ const Agenda = () => {
     }
   };
 
+  // CustomHeader - Componente para mostrar los días en español
+  const CustomHeader = ({ date }: { date: Date; label: React.ReactNode }) => {
+    const diasSemana = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+    const diaNombre = diasSemana[date.getDay()];
+    const diaNumero = format(date, 'd');
+    
+    return (
+      <div className="flex flex-col items-center py-2">
+        <span className="text-xs font-semibold">{diaNombre}</span>
+        <span className="text-lg font-bold">{diaNumero}</span>
+      </div>
+    );
+  };
+
   // CustomEvent - Componente mejorado para mostrar información gráfica de la cita
   const CustomEvent = ({ event }: EventProps<CalendarEvent>) => {
       const cita = event.data;
@@ -1259,6 +1273,12 @@ const Agenda = () => {
                     }}
                     components={{
                         event: CustomEvent,
+                        header: CustomHeader,
+                        resourceHeader: ({ label }: { label: React.ReactNode }) => (
+                          <div className="py-3 px-2 text-center font-semibold text-sm border-b bg-muted/50">
+                            {label}
+                          </div>
+                        ),
                     }}
                   />
                 </div>
