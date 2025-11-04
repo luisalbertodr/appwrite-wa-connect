@@ -65,7 +65,7 @@ const AuthForm: React.FC<{ onLoginSuccess: (user: any) => void }> = ({ onLoginSu
               <Input
                 id="password"
                 type="password"
-                value={email}
+                value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
