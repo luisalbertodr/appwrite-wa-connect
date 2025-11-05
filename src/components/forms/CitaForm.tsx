@@ -89,21 +89,13 @@ export const CitaForm = ({ citaInicial, fechaInicial, empleadoInicial, onSubmit,
   const { mutateAsync: eliminarCita } = useDeleteCita();
 
   // --- Estado local para componentes complejos (buscadores y fechas) ---
-  const [searchNombre, setSearchNombre] = useState('');
-  const [searchTel1, setSearchTel1] = useState('');
-  const [searchTel2, setSearchTel2] = useState('');
-  const [searchEmail, setSearchEmail] = useState('');
-  const [searchDni, setSearchDni] = useState('');
+  const [searchCliente, setSearchCliente] = useState(''); // 🆕 Campo único de búsqueda
   const [articuloSearch, setArticuloSearch] = useState('');
   
   // Estado para debounce de búsqueda
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   
-  const [nombrePopoverOpen, setNombrePopoverOpen] = useState(false);
-  const [tel1PopoverOpen, setTel1PopoverOpen] = useState(false);
-  const [tel2PopoverOpen, setTel2PopoverOpen] = useState(false);
-  const [emailPopoverOpen, setEmailPopoverOpen] = useState(false);
-  const [dniPopoverOpen, setDniPopoverOpen] = useState(false);
+  const [clientePopoverOpen, setClientePopoverOpen] = useState(false); // 🆕 Popover único
   const [articuloPopoverOpen, setArticuloPopoverOpen] = useState(false);
   
   // Estado para fecha y hora
@@ -135,14 +127,19 @@ export const CitaForm = ({ citaInicial, fechaInicial, empleadoInicial, onSubmit,
 
   // Efecto para debounce de búsqueda (300ms de delay)
   useEffect(() => {
-    const searchQuery = searchNombre || searchTel1 || searchTel2 || searchEmail || searchDni || '';
-    
     const timer = setTimeout(() => {
-      setDebouncedSearchQuery(searchQuery);
+      setDebouncedSearchQuery(searchCliente); // 🆕 Solo un campo
     }, 300); // 300ms de delay
     
     return () => clearTimeout(timer);
-  }, [searchNombre, searchTel1, searchTel2, searchEmail, searchDni]);
+  }, [searchCliente]); // 🆕 Solo depende de searchCliente
+  
+  // 🆕 Efecto para cargar el nombre del cliente al editar cita
+  useEffect(() => {
+    if (citaInicial?.cliente_nombre) {
+      setSearchCliente(citaInicial.cliente_nombre);
+    }
+  }, [citaInicial]);
 
   // --- Carga de datos para selectores ---
   const { data: clientes, isLoading: loadingClientes } = useGetClientes(debouncedSearchQuery);
@@ -282,39 +279,15 @@ export const CitaForm = ({ citaInicial, fechaInicial, empleadoInicial, onSubmit,
 
   // --- Lógica de Búsqueda y Selección ---
   const clienteSeleccionadoId = form.watch('cliente_id');
+  
+  // Obtener cliente actual para mostrar en el botón
   const clienteActual = useMemo(() => {
     if (!clienteSeleccionadoId || !clientes) return null;
     return clientes.find(c => c.$id === clienteSeleccionadoId) || null;
   }, [clienteSeleccionadoId, clientes]);
 
-  // Valores mostrados en cada campo
-  const valorNombre = clienteActual?.nombre_completo || 'Buscar por nombre...';
-  const valorTel1 = clienteActual?.tel1cli || 'Buscar por teléfono 1...';
-  const valorTel2 = clienteActual?.tel2cli || 'Buscar por teléfono 2...';
-  const valorEmail = clienteActual?.email || 'Buscar por email...';
-  const valorDni = clienteActual?.dnicli || 'Buscar por DNI...';
-
   // Los clientes ya vienen filtrados del backend usando el índice fulltext
-  // No necesitamos filtrar localmente
   const clientesFiltrados = clientes || [];
-  const clientesPorNombre = clientesFiltrados;
-  const clientesPorTel1 = clientesFiltrados;
-  const clientesPorTel2 = clientesFiltrados;
-  const clientesPorEmail = clientesFiltrados;
-  const clientesPorDni = clientesFiltrados;
-
-  // Función para seleccionar un cliente (sincroniza todos los campos)
-  const seleccionarCliente = (clienteId: string) => {
-    console.log('[CitaForm] Cliente seleccionado:', clienteId);
-    form.setValue('cliente_id', clienteId, { shouldValidate: true, shouldDirty: true });
-    console.log('[CitaForm] Valor del campo cliente_id después de setValue:', form.getValues('cliente_id'));
-    // Cerrar todos los popovers
-    setNombrePopoverOpen(false);
-    setTel1PopoverOpen(false);
-    setTel2PopoverOpen(false);
-    setEmailPopoverOpen(false);
-    setDniPopoverOpen(false);
-  };
 
   // --- Agregar artículo programado ---
   const agregarArticulo = (articuloId: string) => {
@@ -684,10 +657,15 @@ export const CitaForm = ({ citaInicial, fechaInicial, empleadoInicial, onSubmit,
       const [hora, minutos] = horaInicio.split(':').map(Number);
       const fechaHora = setSeconds(setMinutes(setHours(selectedDate!, hora), minutos), 0);
 
+      // 🆕 Obtener el nombre del cliente
+      const clienteSeleccionado = clientes?.find(c => c.$id === data.cliente_id);
+      const cliente_nombre = clienteSeleccionado?.nombre_completo || searchCliente || 'Sin nombre';
+
       const finalData: Partial<CitaInput> = {
         fecha_hora: fechaHora.toISOString(),
         duracion: data.duracion,
         cliente_id: data.cliente_id,
+        cliente_nombre, // 🆕 Incluir nombre del cliente
         empleado_id: data.empleado_id,
         articulos: JSON.stringify(articulosProgramados),
         estado: data.estado,
@@ -718,10 +696,10 @@ export const CitaForm = ({ citaInicial, fechaInicial, empleadoInicial, onSubmit,
           <ScrollArea className="h-[65vh] p-1">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 px-4 py-2">
 
-              {/* --- Cliente (Buscador Multi-Campo - Todos los campos visibles) --- */}
-              <div className="md:col-span-2 space-y-3">
+              {/* --- Cliente (Buscador Unificado) --- */}
+              <div className="md:col-span-2 space-y-2">
                 <div className="flex items-center justify-between">
-                  <FormLabel>Buscar Cliente * </FormLabel>
+                  <FormLabel>Buscar cliente *</FormLabel>
                   {citaInicial && form.watch('cliente_id') && (
                     <span className="text-xs text-muted-foreground italic">
                       Cliente no modificable en citas existentes
@@ -733,259 +711,69 @@ export const CitaForm = ({ citaInicial, fechaInicial, empleadoInicial, onSubmit,
                   name="cliente_id"
                   render={({ field }) => (
                     <FormItem>
-                      {/* Campo oculto para mantener el valor en React Hook Form */}
+                      {/* Campo oculto para mantener el valor */}
                       <FormControl>
                         <Input type="hidden" {...field} />
                       </FormControl>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        {/* Campo: Nombre Completo */}
-                        <div className="space-y-1">
-                          <FormLabel className="text-xs text-muted-foreground">Nombre</FormLabel>
-                          <Popover open={nombrePopoverOpen} onOpenChange={setNombrePopoverOpen}>
-                            <PopoverTrigger asChild>
-                              <Button 
-                                variant="outline" 
-                                role="combobox" 
-                                disabled={!!(citaInicial && field.value)}
-                                className={cn(
-                                  "w-full justify-between font-normal text-left", 
-                                  !field.value && "text-muted-foreground",
-                                  citaInicial && field.value && "cursor-not-allowed opacity-60"
-                                )}
-                              >
-                                <span className="truncate">{valorNombre}</span>
-                                <UserSearch className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-[--radix-popover-trigger-width] max-h-[40vh] p-0" align="start">
-                              <Command shouldFilter={false}>
-                                <CommandInput 
-                                  placeholder="Buscar por nombre..."
-                                  value={searchNombre} 
-                                  onValueChange={setSearchNombre}
-                                />
-                                <CommandList>
-                                  {loadingClientes && <CommandItem disabled><LoadingSpinner/></CommandItem>}
-                                  <CommandEmpty>No encontrado.</CommandEmpty>
-                                  <CommandGroup>
-                                    {clientesPorNombre?.map((cliente) => (
-                                      <CommandItem 
-                                        key={cliente.$id} 
-                                        value={cliente.nombre_completo || cliente.$id} 
-                                        onSelect={() => seleccionarCliente(cliente.$id)}
-                                      >
-                                        <div className="flex flex-col">
-                                          <span>{cliente.nombre_completo}</span>
-                                          <span className="text-xs text-muted-foreground">
-                                            {cliente.tel1cli && `Tel: ${cliente.tel1cli}`}
-                                            {cliente.email && ` | ${cliente.email}`}
-                                          </span>
-                                        </div>
-                                      </CommandItem>
-                                    ))}
-                                  </CommandGroup>
-                                </CommandList>
-                              </Command>
-                            </PopoverContent>
-                          </Popover>
-                        </div>
-
-                        {/* Campo: Teléfono Fijo */}
-                        <div className="space-y-1">
-                          <FormLabel className="text-xs text-muted-foreground">Tfno. fijo</FormLabel>
-                          <Popover open={tel1PopoverOpen} onOpenChange={setTel1PopoverOpen}>
-                            <PopoverTrigger asChild>
-                              <Button 
-                                variant="outline" 
-                                role="combobox" 
-                                disabled={!!(citaInicial && field.value)}
-                                className={cn(
-                                  "w-full justify-between font-normal text-left", 
-                                  !field.value && "text-muted-foreground",
-                                  citaInicial && field.value && "cursor-not-allowed opacity-60"
-                                )}
-                              >
-                                <span className="truncate">{valorTel1}</span>
-                                <UserSearch className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-[--radix-popover-trigger-width] max-h-[40vh] p-0" align="start">
-                              <Command shouldFilter={false}>
-                                <CommandInput 
-                                  placeholder="Buscar por tfno. fijo..."
-                                  value={searchTel1} 
-                                  onValueChange={setSearchTel1}
-                                />
-                                <CommandList>
-                                  {loadingClientes && <CommandItem disabled><LoadingSpinner/></CommandItem>}
-                                  <CommandEmpty>No encontrado.</CommandEmpty>
-                                  <CommandGroup>
-                                    {clientesPorTel1?.map((cliente) => (
-                                      <CommandItem 
-                                        key={cliente.$id} 
-                                        value={cliente.tel1cli || cliente.$id} 
-                                        onSelect={() => seleccionarCliente(cliente.$id)}
-                                      >
-                                        <div className="flex flex-col">
-                                          <span>{cliente.tel1cli}</span>
-                                          <span className="text-xs text-muted-foreground">{cliente.nombre_completo}</span>
-                                        </div>
-                                      </CommandItem>
-                                    ))}
-                                  </CommandGroup>
-                                </CommandList>
-                              </Command>
-                            </PopoverContent>
-                          </Popover>
-                        </div>
-
-                        {/* Campo: Teléfono Móvil */}
-                        <div className="space-y-1">
-                          <FormLabel className="text-xs text-muted-foreground">Tfno. móvil</FormLabel>
-                          <Popover open={tel2PopoverOpen} onOpenChange={setTel2PopoverOpen}>
-                            <PopoverTrigger asChild>
-                              <Button 
-                                variant="outline" 
-                                role="combobox" 
-                                disabled={!!(citaInicial && field.value)}
-                                className={cn(
-                                  "w-full justify-between font-normal text-left", 
-                                  !field.value && "text-muted-foreground",
-                                  citaInicial && field.value && "cursor-not-allowed opacity-60"
-                                )}
-                              >
-                                <span className="truncate">{valorTel2}</span>
-                                <UserSearch className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-[--radix-popover-trigger-width] max-h-[40vh] p-0" align="start">
-                              <Command shouldFilter={false}>
-                                <CommandInput 
-                                  placeholder="Buscar por tfno. móvil..."
-                                  value={searchTel2} 
-                                  onValueChange={setSearchTel2}
-                                />
-                                <CommandList>
-                                  {loadingClientes && <CommandItem disabled><LoadingSpinner/></CommandItem>}
-                                  <CommandEmpty>No encontrado.</CommandEmpty>
-                                  <CommandGroup>
-                                    {clientesPorTel2?.map((cliente) => (
-                                      <CommandItem 
-                                        key={cliente.$id} 
-                                        value={cliente.tel2cli || cliente.$id} 
-                                        onSelect={() => seleccionarCliente(cliente.$id)}
-                                      >
-                                        <div className="flex flex-col">
-                                          <span>{cliente.tel2cli}</span>
-                                          <span className="text-xs text-muted-foreground">{cliente.nombre_completo}</span>
-                                        </div>
-                                      </CommandItem>
-                                    ))}
-                                  </CommandGroup>
-                                </CommandList>
-                              </Command>
-                            </PopoverContent>
-                          </Popover>
-                        </div>
-
-                        {/* Campo: Email */}
-                        <div className="space-y-1">
-                          <FormLabel className="text-xs text-muted-foreground">Email</FormLabel>
-                          <Popover open={emailPopoverOpen} onOpenChange={setEmailPopoverOpen}>
-                            <PopoverTrigger asChild>
-                              <Button 
-                                variant="outline" 
-                                role="combobox" 
-                                disabled={!!(citaInicial && field.value)}
-                                className={cn(
-                                  "w-full justify-between font-normal text-left", 
-                                  !field.value && "text-muted-foreground",
-                                  citaInicial && field.value && "cursor-not-allowed opacity-60"
-                                )}
-                              >
-                                <span className="truncate">{valorEmail}</span>
-                                <UserSearch className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-[--radix-popover-trigger-width] max-h-[40vh] p-0" align="start">
-                              <Command shouldFilter={false}>
-                                <CommandInput 
-                                  placeholder="Buscar por email..."
-                                  value={searchEmail} 
-                                  onValueChange={setSearchEmail}
-                                />
-                                <CommandList>
-                                  {loadingClientes && <CommandItem disabled><LoadingSpinner/></CommandItem>}
-                                  <CommandEmpty>No encontrado.</CommandEmpty>
-                                  <CommandGroup>
-                                    {clientesPorEmail?.map((cliente) => (
-                                      <CommandItem 
-                                        key={cliente.$id} 
-                                        value={cliente.email || cliente.$id} 
-                                        onSelect={() => seleccionarCliente(cliente.$id)}
-                                      >
-                                        <div className="flex flex-col">
-                                          <span>{cliente.email}</span>
-                                          <span className="text-xs text-muted-foreground">{cliente.nombre_completo}</span>
-                                        </div>
-                                      </CommandItem>
-                                    ))}
-                                  </CommandGroup>
-                                </CommandList>
-                              </Command>
-                            </PopoverContent>
-                          </Popover>
-                        </div>
-
-                        {/* Campo: DNI */}
-                        <div className="space-y-1">
-                          <FormLabel className="text-xs text-muted-foreground">DNI</FormLabel>
-                          <Popover open={dniPopoverOpen} onOpenChange={setDniPopoverOpen}>
-                            <PopoverTrigger asChild>
-                              <Button 
-                                variant="outline" 
-                                role="combobox" 
-                                disabled={!!(citaInicial && field.value)}
-                                className={cn(
-                                  "w-full justify-between font-normal text-left", 
-                                  !field.value && "text-muted-foreground",
-                                  citaInicial && field.value && "cursor-not-allowed opacity-60"
-                                )}
-                              >
-                                <span className="truncate">{valorDni}</span>
-                                <UserSearch className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-[--radix-popover-trigger-width] max-h-[40vh] p-0" align="start">
-                              <Command shouldFilter={false}>
-                                <CommandInput 
-                                  placeholder="Buscar por DNI..."
-                                  value={searchDni} 
-                                  onValueChange={setSearchDni}
-                                />
-                                <CommandList>
-                                  {loadingClientes && <CommandItem disabled><LoadingSpinner/></CommandItem>}
-                                  <CommandEmpty>No encontrado.</CommandEmpty>
-                                  <CommandGroup>
-                                    {clientesPorDni?.map((cliente) => (
-                                      <CommandItem 
-                                        key={cliente.$id} 
-                                        value={cliente.dnicli || cliente.$id} 
-                                        onSelect={() => seleccionarCliente(cliente.$id)}
-                                      >
-                                        <div className="flex flex-col">
-                                          <span>{cliente.dnicli}</span>
-                                          <span className="text-xs text-muted-foreground">{cliente.nombre_completo}</span>
-                                        </div>
-                                      </CommandItem>
-                                    ))}
-                                  </CommandGroup>
-                                </CommandList>
-                              </Command>
-                            </PopoverContent>
-                          </Popover>
-                        </div>
-                      </div>
+                      
+                      {/* Campo de búsqueda único */}
+                      <Popover open={clientePopoverOpen} onOpenChange={setClientePopoverOpen}>
+                        <PopoverTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            role="combobox" 
+                            disabled={!!(citaInicial && field.value)}
+                            className={cn(
+                              "w-full justify-between font-normal text-left", 
+                              !field.value && "text-muted-foreground",
+                              citaInicial && field.value && "cursor-not-allowed opacity-60"
+                            )}
+                          >
+                            <span className="truncate">
+                              {clienteActual?.nombre_completo || searchCliente || 'Buscar por nombre, teléfono, email o DNI...'}
+                            </span>
+                            <UserSearch className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[--radix-popover-trigger-width] max-h-[40vh] p-0" align="start">
+                          <Command shouldFilter={false}>
+                            <CommandInput 
+                              placeholder="Buscar cliente..."
+                              value={searchCliente} 
+                              onValueChange={setSearchCliente}
+                            />
+                            <CommandList>
+                              {loadingClientes && <CommandItem disabled><LoadingSpinner/></CommandItem>}
+                              <CommandEmpty>No encontrado.</CommandEmpty>
+                              <CommandGroup>
+                                {clientesFiltrados?.map((cliente) => (
+                                  <CommandItem 
+                                    key={cliente.$id} 
+                                    value={cliente.nombre_completo || cliente.$id} 
+                                    onSelect={() => {
+                                      form.setValue('cliente_id', cliente.$id, { shouldValidate: true });
+                                      setSearchCliente(cliente.nombre_completo || '');
+                                      setClientePopoverOpen(false);
+                                    }}
+                                  >
+                                    <div className="flex flex-col">
+                                      <span className="font-medium">{cliente.nombre_completo}</span>
+                                      <span className="text-xs text-muted-foreground">
+                                        {[
+                                          cliente.tel1cli && `Tel: ${cliente.tel1cli}`,
+                                          cliente.tel2cli && `Móv: ${cliente.tel2cli}`,
+                                          cliente.email,
+                                          cliente.dnicli && `DNI: ${cliente.dnicli}`
+                                        ].filter(Boolean).join(' | ')}
+                                      </span>
+                                    </div>
+                                  </CommandItem>
+                                ))}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                       <FormMessage />
                     </FormItem>
                   )}

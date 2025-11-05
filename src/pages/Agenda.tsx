@@ -7,12 +7,9 @@ import {
   useUpdateCita} from '@/hooks/useAgenda';
 import { useGetEmpleados } from '@/hooks/useEmpleados';
 import { useUser } from '@/hooks/useAuth';
-// Asumiendo que useGetClientes devuelve Cliente[] | undefined
-import { useGetClientes } from '@/hooks/useClientes';
 import { useGetRecursos } from '@/hooks/useRecursos';
 import { useGetConfiguration } from '@/hooks/useConfiguration';
 import { Cita, CitaInput, LipooutUserInput } from '@/types';
-import { Cliente } from '@/types/cliente.types';
 import { Empleado } from '@/types/empleado.types';
 import { Recurso } from '@/types/recurso.types';
 
@@ -162,7 +159,6 @@ const Agenda = () => {
   // --- FIN MODIFICACIÓN ---
 
   const { data: empleadosData, isLoading: loadingEmpleados, error: errorEmpleados } = useGetEmpleados(false);
-  const { data: clientesData, isLoading: loadingClientes, error: errorClientes } = useGetClientes();
   const { data: recursosData } = useGetRecursos(false); // Obtener todos los recursos
   const { data: configuracionData } = useGetConfiguration();
 
@@ -586,15 +582,11 @@ const Agenda = () => {
   const events: CalendarEvent[] = useMemo(() => {
     console.log('%c[Agenda Component - useMemo events] Iniciando cálculo de eventos...', 'color: darkcyan;');
     console.log('[Agenda Component - useMemo events] Input citasActuales:', citasActuales);
-    console.log(`[Agenda Component - useMemo events] Estado clientes: loading=${loadingClientes}, data is array=${Array.isArray(clientesData)}`);
 
-    if (!citasActuales || loadingClientes || !Array.isArray(clientesData)) {
-        console.warn('[Agenda Component - useMemo events] Devolviendo array vacío (faltan citas, clientes cargando, o clientesData no es un array)');
+    if (!citasActuales) {
+        console.warn('[Agenda Component - useMemo events] Devolviendo array vacío (faltan citas)');
         return [];
     }
-
-    const clienteMap = new Map(clientesData.map((c: Cliente) => [c.$id, c]));
-    console.log('[Agenda Component - useMemo events] Mapa de clientes creado, tamaño:', clienteMap.size);
 
     const transformedEvents = citasActuales.map((cita: Cita & Models.Document) => {
       // console.log(`%c[Agenda Component - useMemo events] Procesando cita[${index}] ID: ${cita.$id}`, 'color: gray;', cita);
@@ -616,9 +608,8 @@ const Agenda = () => {
          return null;
        }
 
-      const cliente = clienteMap.get(cita.cliente_id);
-      const clienteNombreCompleto = cliente?.nombre_completo || `${cliente?.nomcli || ''} ${cliente?.ape1cli || ''}`.trim();
-      const clienteInfo = `${clienteNombreCompleto || 'Cliente?'} (${cliente?.tel2cli || 'Sin Tlf'})`;
+      // 🆕 Usar el nombre directamente de la cita (desnormalizado)
+      const clienteInfo = `${cita.cliente_nombre || 'Cliente?'}`;
 
       let tratamientos = 'Sin tratamientos';
       try {
@@ -652,11 +643,11 @@ const Agenda = () => {
     console.log('%c[Agenda Component - useMemo events] Array final de eventos transformados:', 'color: darkcyan; font-weight: bold;', transformedEvents);
     return transformedEvents;
 
-  }, [citasActuales, clientesData, loadingClientes]);
+  }, [citasActuales]); // 🆕 Ya no depende de clientesData ni loadingClientes
 
 
-  const isLoading = loadingCitas || loadingEmpleados || loadingClientes;
-  const hasError = errorCitas || errorEmpleados || errorClientes;
+  const isLoading = loadingCitas || loadingEmpleados;
+  const hasError = errorCitas || errorEmpleados;
 
   // Manejadores
   // --- MODIFICACIÓN: handleOpenCreateDialog eliminado (se crea al hacer clic en slot) ---
@@ -758,6 +749,7 @@ const Agenda = () => {
       // Actualizar la cita con la nueva fecha/hora y empleada
       const dataToUpdate: LipooutUserInput<CitaInput> = {
         cliente_id: cita.cliente_id,
+        cliente_nombre: cita.cliente_nombre || 'Sin nombre', // 🆕 Incluir nombre
         empleado_id: nuevaEmpleadaId,
         fecha_hora: nuevaFechaHora,
         duracion: cita.duracion,
@@ -795,6 +787,7 @@ const Agenda = () => {
       // Actualizar la cita con la nueva duración
       const dataToUpdate: LipooutUserInput<CitaInput> = {
         cliente_id: cita.cliente_id,
+        cliente_nombre: cita.cliente_nombre || 'Sin nombre', // 🆕 Incluir nombre
         empleado_id: cita.empleado_id,
         fecha_hora: start.toISOString(),
         duracion: nuevaDuracion,
@@ -1197,7 +1190,7 @@ const Agenda = () => {
                 Error al cargar datos.
                 {errorCitas && <span> (Citas: {errorCitas instanceof Error ? errorCitas.message : String(errorCitas)})</span>}
                 {errorEmpleados && <span> (Empleados: {errorEmpleados instanceof Error ? errorEmpleados.message : String(errorEmpleados)})</span>}
-                {errorClientes && <span> (Clientes: {errorClientes instanceof Error ? errorClientes.message : String(errorClientes)})</span>}
+                
               </p>
           )}
 

@@ -205,6 +205,12 @@ const cleanUndefinedFields = <T extends Record<string, any>>(obj: T): Partial<T>
 
 // --- createCita (con Logs detallados) ---
 export const createCita = async (cita: LipooutUserInput<CitaInput>): Promise<Cita & Models.Document> => {
+    // 🆕 VALIDAR que cliente_nombre esté presente
+    if (!cita.cliente_nombre || cita.cliente_nombre.trim() === '') {
+      console.error('❌ Error: cliente_nombre no puede estar vacío');
+      throw new Error('El nombre del cliente es obligatorio');
+    }
+    
     // Limpiar campos undefined antes de enviar
     const citaLimpia = cleanUndefinedFields(cita);
     
@@ -212,6 +218,7 @@ export const createCita = async (cita: LipooutUserInput<CitaInput>): Promise<Cit
     console.log('%c=== CREAR CITA - Datos enviados ===', 'color: green; font-weight: bold;');
     console.log('DATABASE_ID:', DATABASE_ID);
     console.log('CITAS_COLLECTION_ID:', CITAS_COLLECTION_ID);
+    console.log('cliente_nombre:', cita.cliente_nombre); // 🆕 LOG
     console.log('Datos originales:', cita);
     console.log('Datos limpiados:', citaLimpia);
     // Loguear tipos para asegurar formato correcto
@@ -252,6 +259,12 @@ export const createCita = async (cita: LipooutUserInput<CitaInput>): Promise<Cit
 
 // --- updateCita ---
 export const updateCita = async (id: string, data: Partial<LipooutUserInput<CitaInput>>): Promise<Cita & Models.Document> => {
+    // 🆕 Si se actualiza cliente_id, validar que también venga cliente_nombre
+    if (data.cliente_id && (!data.cliente_nombre || data.cliente_nombre.trim() === '')) {
+      console.error('❌ Error: si se actualiza cliente_id, también debe incluirse cliente_nombre');
+      throw new Error('El nombre del cliente es obligatorio al cambiar de cliente');
+    }
+    
     // Limpiar campos undefined antes de enviar
     const dataLimpia = cleanUndefinedFields(data);
     

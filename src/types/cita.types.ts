@@ -10,6 +10,7 @@ export interface Cita extends LipooutDocument {
 
   // IDs de las relaciones
   cliente_id: string;
+  cliente_nombre: string; // 🆕 Nombre del cliente (desnormalizado para rendimiento)
   empleado_id: string;
   articulos: string; // JSON string con array de ItemCita[] (ArticuloEnCita | TiempoNoBillable)
   
@@ -26,6 +27,7 @@ export interface CitaInput {
 
   // Solo IDs para crear/actualizar
   cliente_id: string;
+  cliente_nombre: string; // 🆕 Nombre del cliente (desnormalizado para rendimiento)
   empleado_id: string;
   articulos: string; // JSON string con array de ItemCita[] (ArticuloEnCita | TiempoNoBillable)
 
