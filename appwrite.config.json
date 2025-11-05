@@ -106,6 +106,29 @@
             "logging": true,
             "scopes": [],
             "specification": "s-1vcpu-512mb"
+        },
+        {
+            "$id": "MigrationFunction",
+            "execute": [
+                "users"
+            ],
+            "name": "MigrationFunction",
+            "enabled": true,
+            "logging": true,
+            "runtime": "node-18.0",
+            "scopes": [
+                "databases.read",
+                "databases.write",
+                "documents.read",
+                "documents.write"
+            ],
+            "events": [],
+            "schedule": "",
+            "timeout": 900,
+            "entrypoint": "src/main.js",
+            "commands": "npm install",
+            "path": "functions/MigrationFunction",
+            "specification": "s-1vcpu-512mb"
         }
     ],
     "databases": [
@@ -312,6 +335,15 @@
                     "required": false,
                     "array": true,
                     "size": 255,
+                    "encrypt": false,
+                    "default": null
+                },
+                {
+                    "key": "search_unified",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 2000,
                     "encrypt": false,
                     "default": null
                 }
@@ -876,6 +908,117 @@
                     "array": false,
                     "min": -10000,
                     "max": 100000,
+                    "default": null
+                },
+                {
+                    "key": "cliente_nombre",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "encrypt": false,
+                    "default": null
+                }
+            ],
+            "indexes": []
+        },
+        {
+            "$id": "migration_logs",
+            "$permissions": [
+                "create(\"users\")",
+                "read(\"users\")",
+                "update(\"users\")"
+            ],
+            "databaseId": "68b1d7530028045d94d3",
+            "name": "Migration Logs",
+            "enabled": true,
+            "documentSecurity": false,
+            "attributes": [
+                {
+                    "key": "migration_type",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 255,
+                    "encrypt": false,
+                    "default": null
+                },
+                {
+                    "key": "status",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 50,
+                    "encrypt": false,
+                    "default": null,
+                    "format": "enum",
+                    "elements": [
+                        "running",
+                        "completed",
+                        "failed"
+                    ]
+                },
+                {
+                    "key": "total_records",
+                    "type": "integer",
+                    "required": true,
+                    "array": false,
+                    "min": 0,
+                    "max": 1000000000,
+                    "default": null
+                },
+                {
+                    "key": "processed_records",
+                    "type": "integer",
+                    "required": true,
+                    "array": false,
+                    "min": 0,
+                    "max": 1000000000,
+                    "default": null
+                },
+                {
+                    "key": "successful_records",
+                    "type": "integer",
+                    "required": true,
+                    "array": false,
+                    "min": 0,
+                    "max": 1000000000,
+                    "default": null
+                },
+                {
+                    "key": "failed_records",
+                    "type": "integer",
+                    "required": true,
+                    "array": false,
+                    "min": 0,
+                    "max": 1000000000,
+                    "default": null
+                },
+                {
+                    "key": "started_at",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 255,
+                    "encrypt": false,
+                    "default": null
+                },
+                {
+                    "key": "completed_at",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "encrypt": false,
+                    "default": null
+                },
+                {
+                    "key": "error_message",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 2000,
+                    "encrypt": false,
                     "default": null
                 }
             ],
