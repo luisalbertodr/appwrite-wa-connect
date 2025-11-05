@@ -128,7 +128,12 @@
             "entrypoint": "src/main.js",
             "commands": "npm install",
             "path": "functions/MigrationFunction",
-            "specification": "s-1vcpu-512mb"
+            "specification": "s-1vcpu-512mb",
+            "variables": {
+                "APPWRITE_DATABASE_ID": "68b1d7530028045d94d3",
+                "APPWRITE_CLIENTS_COLLECTION_ID": "clientes",
+                "APPWRITE_CITAS_COLLECTION_ID": "citas"
+            }
         }
     ],
     "databases": [

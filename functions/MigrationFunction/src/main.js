@@ -212,20 +212,40 @@ const migrateClienteNombre = async (databases, config, log) => {
 module.exports = async ({ req, res, log, error }) => {
   log('🚀 Función de migración iniciada');
   
-  // Configuración
+  // Configuración usando variables automáticas de Appwrite
+  const endpoint = process.env.APPWRITE_FUNCTION_API_ENDPOINT || process.env.APPWRITE_ENDPOINT || 'https://appwrite.lipoout.com/v1';
+  const projectId = process.env.APPWRITE_FUNCTION_PROJECT_ID || process.env.APPWRITE_PROJECT_ID || '68a8bb45000adadfb279';
+  const apiKey = process.env.APPWRITE_API_KEY;
+  
+  log(`📡 Endpoint: ${endpoint}`);
+  log(`🔑 Project ID: ${projectId}`);
+  log(`🔐 API Key configurada: ${apiKey ? 'Sí' : 'No'}`);
+  
+  if (!apiKey) {
+    error('❌ APPWRITE_API_KEY no está configurada');
+    return res.json({
+      success: false,
+      error: 'APPWRITE_API_KEY no configurada en las variables de entorno de la función'
+    }, 500);
+  }
+  
   const client = new Client()
-    .setEndpoint(process.env.APPWRITE_ENDPOINT || 'http://appwrite/v1')
-    .setProject(process.env.APPWRITE_PROJECT_ID)
-    .setKey(process.env.APPWRITE_API_KEY);
+    .setEndpoint(endpoint)
+    .setProject(projectId)
+    .setKey(apiKey);
   
   const databases = new Databases(client);
   
   const config = {
-    DATABASE_ID: process.env.APPWRITE_DATABASE_ID,
-    CLIENTS_COLLECTION_ID: process.env.APPWRITE_CLIENTS_COLLECTION_ID || 'clients',
+    DATABASE_ID: process.env.APPWRITE_DATABASE_ID || '68b1d7530028045d94d3',
+    CLIENTS_COLLECTION_ID: process.env.APPWRITE_CLIENTS_COLLECTION_ID || 'clientes',
     CITAS_COLLECTION_ID: process.env.APPWRITE_CITAS_COLLECTION_ID || 'citas',
     MIGRATION_LOGS_COLLECTION_ID: 'migration_logs'
   };
+  
+  log(`📊 Database ID: ${config.DATABASE_ID}`);
+  log(`👥 Clients Collection: ${config.CLIENTS_COLLECTION_ID}`);
+  log(`📅 Citas Collection: ${config.CITAS_COLLECTION_ID}`);
   
   // Parsear payload
   let payload = {};
