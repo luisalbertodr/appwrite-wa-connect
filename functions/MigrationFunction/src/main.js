@@ -269,7 +269,7 @@ module.exports = async ({ req, res, log, error }) => {
       migrationId,
       {
         migration_type: migrationType,
-        status: 'running',
+        status2: 'running',
         total_records: 0,
         processed_records: 0,
         successful_records: 0,
@@ -307,7 +307,7 @@ module.exports = async ({ req, res, log, error }) => {
       config.MIGRATION_LOGS_COLLECTION_ID,
       migrationId,
       {
-        status: 'completed',
+        status2: 'completed',
         total_records: totalRecords,
         processed_records: totalUpdated,
         successful_records: totalUpdated - totalErrors,
@@ -340,7 +340,7 @@ module.exports = async ({ req, res, log, error }) => {
         config.MIGRATION_LOGS_COLLECTION_ID,
         migrationId,
         {
-          status: 'failed',
+          status2: 'failed',
           error_message: err.message,
           completed_at: new Date().toISOString()
         }

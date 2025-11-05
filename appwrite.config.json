@@ -949,7 +949,7 @@
                     "default": null
                 },
                 {
-                    "key": "status",
+                    "key": "status2",
                     "type": "string",
                     "required": true,
                     "array": false,

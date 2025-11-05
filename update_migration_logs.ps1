@@ -33,11 +33,11 @@ appwrite databases create-string-attribute `
     --size 255 `
     --required true
 
-# --- Atributo: status (enum) ---
+# --- Atributo: status2 (enum) ---
 appwrite databases create-enum-attribute `
     --database-id $DATABASE_ID `
     --collection-id $COLLECTION_ID `
-    --key "status" `
+    --key "status2" `
     --elements "running" "completed" "failed" `
     --required true
 
