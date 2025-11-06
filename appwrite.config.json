@@ -949,7 +949,7 @@
                     "default": null
                 },
                 {
-                    "key": "status",
+                    "key": "status2",
                     "type": "string",
                     "required": true,
                     "array": false,
@@ -2103,7 +2103,8 @@
                         "Admin",
                         "Médico",
                         "Recepción",
-                        "Lectura"
+                        "Lectura",
+                        "Esteticista"
                     ],
                     "format": "enum",
                     "default": null
@@ -2275,6 +2276,15 @@
                     "min": -1000000,
                     "max": 1000000,
                     "default": null
+                },
+                {
+                    "key": "cliente_nombre",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
             "indexes": [
@@ -2542,6 +2552,15 @@
                     "required": false,
                     "array": false,
                     "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "horarios",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 5000,
                     "default": null,
                     "encrypt": false
                 }
@@ -3322,6 +3341,24 @@
                     "size": 5000,
                     "default": null,
                     "encrypt": false
+                },
+                {
+                    "key": "historial_citas",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 65535,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "search_unified",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 1024,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
             "indexes": [
@@ -3337,66 +3374,11 @@
                     ]
                 },
                 {
-                    "key": "index_2",
+                    "key": "idx_search_unified",
                     "type": "fulltext",
                     "status": "available",
                     "columns": [
-                        "dnicli"
-                    ],
-                    "orders": [
-                        "ASC"
-                    ]
-                },
-                {
-                    "key": "index_3",
-                    "type": "fulltext",
-                    "status": "available",
-                    "columns": [
-                        "email"
-                    ],
-                    "orders": [
-                        "ASC"
-                    ]
-                },
-                {
-                    "key": "index_4",
-                    "type": "fulltext",
-                    "status": "available",
-                    "columns": [
-                        "pobcli"
-                    ],
-                    "orders": [
-                        "ASC"
-                    ]
-                },
-                {
-                    "key": "index_5",
-                    "type": "fulltext",
-                    "status": "available",
-                    "columns": [
-                        "procli"
-                    ],
-                    "orders": [
-                        "ASC"
-                    ]
-                },
-                {
-                    "key": "index_6",
-                    "type": "fulltext",
-                    "status": "available",
-                    "columns": [
-                        "tel1cli"
-                    ],
-                    "orders": [
-                        "ASC"
-                    ]
-                },
-                {
-                    "key": "index_7",
-                    "type": "fulltext",
-                    "status": "available",
-                    "columns": [
-                        "tel2cli"
+                        "search_unified"
                     ],
                     "orders": [
                         "ASC"
@@ -3935,6 +3917,15 @@
                     "required": true,
                     "array": false,
                     "default": null
+                },
+                {
+                    "key": "notas_adicionales",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 1000,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
             "indexes": []
@@ -4376,6 +4367,220 @@
                     "min": 0,
                     "max": 10000,
                     "default": null
+                }
+            ],
+            "indexes": []
+        },
+        {
+            "$id": "auditoria",
+            "$permissions": [],
+            "databaseId": "68b1d7530028045d94d3",
+            "name": "auditoria",
+            "enabled": true,
+            "rowSecurity": false,
+            "columns": [
+                {
+                    "key": "entidad_tipo",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "entidad_id",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "accion",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "usuario_id",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "usuario_nombre",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "usuario_email",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "descripcion",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 500,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "datos_anteriores",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100000,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "datos_nuevos",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100000,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "ip_address",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "fecha_accion",
+                    "type": "datetime",
+                    "required": true,
+                    "array": false,
+                    "format": "",
+                    "default": null
+                },
+                {
+                    "key": "modulo",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "notas",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 1000,
+                    "default": null,
+                    "encrypt": false
+                }
+            ],
+            "indexes": []
+        },
+        {
+            "$id": "migration_logs",
+            "$permissions": [
+                "create(\"users\")",
+                "read(\"users\")",
+                "update(\"users\")"
+            ],
+            "databaseId": "68b1d7530028045d94d3",
+            "name": "Migration Logs",
+            "enabled": true,
+            "rowSecurity": false,
+            "columns": [
+                {
+                    "key": "migration_type",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "total_records",
+                    "type": "integer",
+                    "required": true,
+                    "array": false,
+                    "min": 0,
+                    "max": 1000000000,
+                    "default": null
+                },
+                {
+                    "key": "processed_records",
+                    "type": "integer",
+                    "required": true,
+                    "array": false,
+                    "min": 0,
+                    "max": 1000000000,
+                    "default": null
+                },
+                {
+                    "key": "successful_records",
+                    "type": "integer",
+                    "required": true,
+                    "array": false,
+                    "min": 0,
+                    "max": 1000000000,
+                    "default": null
+                },
+                {
+                    "key": "failed_records",
+                    "type": "integer",
+                    "required": true,
+                    "array": false,
+                    "min": 0,
+                    "max": 1000000000,
+                    "default": null
+                },
+                {
+                    "key": "started_at",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "completed_at",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 255,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "error_message",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 2000,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
             "indexes": []
