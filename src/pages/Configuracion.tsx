@@ -418,16 +418,18 @@ const Configuracion = () => {
                       {importLogs && importLogs.length > 0 ? importLogs.map(log => {
                         // Validar y formatear la fecha de forma segura
                         let fechaFormateada = 'Fecha inválida';
-                        try {
-                          if (log.timestamp) {
-                            const fecha = new Date(log.timestamp);
-                            if (!isNaN(fecha.getTime())) {
-                              fechaFormateada = format(fecha, 'dd/MM/yy HH:mm');
-                            }
-                          }
-                        } catch (e) {
-                          console.error('Error formateando fecha:', e);
+                        
+                        // FIX para RangeError: Invalid time value
+                        // El error ocurre cuando la función format de date-fns recibe un objeto Date no válido.
+                        // El bloque try/catch original no estaba capturando el error correctamente en el entorno de producción.
+                        // Simplificamos la lógica para asegurar que el objeto Date es válido antes de formatear.
+                        const fecha = log.timestamp ? new Date(log.timestamp) : null;
+
+                        // Solo formateamos si el objeto Date se creó y es válido (!isNaN(getTime()))
+                        if (fecha && !isNaN(fecha.getTime())) {
+                            fechaFormateada = format(fecha, 'dd/MM/yy HH:mm');
                         }
+                        // FIN FIX
                         
                         return (
                         <TableRow key={log.$id}>

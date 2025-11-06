@@ -84,6 +84,10 @@ export const MigrationLogsViewer = () => {
   const getDuration = (log: MigrationLog) => {
     const start = new Date(log.started_at);
     const end = log.completed_at ? new Date(log.completed_at) : new Date();
+    
+    // FIX para RangeError: Invalid time value - Asegura que las fechas son válidas antes de calcular
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) return '-';
+
     const diffMs = end.getTime() - start.getTime();
     const diffSecs = Math.floor(diffMs / 1000);
     
@@ -157,48 +161,56 @@ export const MigrationLogsViewer = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {logs.map((log) => (
-                  <TableRow key={log.$id} className={log.status2 === 'running' ? 'bg-blue-50 dark:bg-blue-950/20' : ''}>
-                    <TableCell className="font-medium">
-                      {getMigrationTypeLabel(log.migration_type)}
-                    </TableCell>
-                    <TableCell>{getStatusBadge(log.status2)}</TableCell>
-                    <TableCell>
-                      {log.status2 === 'running' ? (
-                        <div className="flex items-center gap-2">
-                          <div className="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700">
-                            <div
-                              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                              style={{ width: `${getProgress(log)}%` }}
-                            />
+                {logs.map((log) => {
+                  // FIX para RangeError: Invalid time value - Pre-validación de la fecha de inicio
+                  const startedAtDate = new Date(log.started_at);
+                  const isStartedAtValid = !isNaN(startedAtDate.getTime());
+
+                  return (
+                    <TableRow key={log.$id} className={log.status2 === 'running' ? 'bg-blue-50 dark:bg-blue-950/20' : ''}>
+                      <TableCell className="font-medium">
+                        {getMigrationTypeLabel(log.migration_type)}
+                      </TableCell>
+                      <TableCell>{getStatusBadge(log.status2)}</TableCell>
+                      <TableCell>
+                        {log.status2 === 'running' ? (
+                          <div className="flex items-center gap-2">
+                            <div className="w-full bg-gray-200 rounded-full h-2 dark:bg-gray-700">
+                              <div
+                                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                                style={{ width: `${getProgress(log)}%` }}
+                              />
+                            </div>
+                            <span className="text-xs text-muted-foreground min-w-[45px]">
+                              {log.processed_records}/{log.total_records}
+                            </span>
                           </div>
-                          <span className="text-xs text-muted-foreground min-w-[45px]">
+                        ) : (
+                          <span className="text-sm text-muted-foreground">
                             {log.processed_records}/{log.total_records}
                           </span>
-                        </div>
-                      ) : (
-                        <span className="text-sm text-muted-foreground">
-                          {log.processed_records}/{log.total_records}
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-green-600 dark:text-green-400">
-                      {log.successful_records}
-                    </TableCell>
-                    <TableCell className={log.failed_records > 0 ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground'}>
-                      {log.failed_records}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {getDuration(log)}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {formatDistanceToNow(new Date(log.started_at), { 
-                        addSuffix: true,
-                        locale: es 
-                      })}
-                    </TableCell>
-                  </TableRow>
-                ))}
+                        )}
+                      </TableCell>
+                      <TableCell className="text-green-600 dark:text-green-400">
+                        {log.successful_records}
+                      </TableCell>
+                      <TableCell className={log.failed_records > 0 ? 'text-red-600 dark:text-red-400' : 'text-muted-foreground'}>
+                        {log.failed_records}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {getDuration(log)}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {isStartedAtValid
+                          ? formatDistanceToNow(startedAtDate, { 
+                              addSuffix: true,
+                              locale: es 
+                            })
+                          : 'Fecha inválida'}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </div>
