@@ -280,55 +280,77 @@ module.exports = async ({ req, res, log, error }) => {
       }
     );
     
-    const results = {};
+    log('✅ Log de migración creado, iniciando proceso en background...');
     
-    // Ejecutar migración(es) según el tipo
-    if (migrationType === 'search_unified' || migrationType === 'all') {
-      results.searchUnified = await migrateSearchUnified(databases, config, log);
-    }
-    
-    if (migrationType === 'cliente_nombre' || migrationType === 'all') {
-      results.clienteNombre = await migrateClienteNombre(databases, config, log);
-    }
-    
-    // Validar tipo
-    if (!results.searchUnified && !results.clienteNombre) {
-      throw new Error(`Tipo de migración no válido: ${migrationType}. Valores aceptados: search_unified, cliente_nombre, all`);
-    }
-    
-    // Calcular totales
-    const totalUpdated = (results.searchUnified?.totalUpdated || 0) + (results.clienteNombre?.totalUpdated || 0);
-    const totalErrors = (results.searchUnified?.totalErrors || 0) + (results.clienteNombre?.totalErrors || 0);
-    const totalRecords = (results.searchUnified?.total || 0) + (results.clienteNombre?.total || 0);
-    
-    // Actualizar log final
-    await databases.updateDocument(
-      config.DATABASE_ID,
-      config.MIGRATION_LOGS_COLLECTION_ID,
-      migrationId,
-      {
-        status2: 'completed',
-        total_records: totalRecords,
-        processed_records: totalUpdated,
-        successful_records: totalUpdated - totalErrors,
-        failed_records: totalErrors,
-        completed_at: new Date().toISOString()
+    // Ejecutar migración en background (no bloqueante)
+    (async () => {
+      try {
+        const results = {};
+        
+        // Ejecutar migración(es) según el tipo
+        if (migrationType === 'search_unified' || migrationType === 'all') {
+          results.searchUnified = await migrateSearchUnified(databases, config, log);
+        }
+        
+        if (migrationType === 'cliente_nombre' || migrationType === 'all') {
+          results.clienteNombre = await migrateClienteNombre(databases, config, log);
+        }
+        
+        // Validar tipo
+        if (!results.searchUnified && !results.clienteNombre) {
+          throw new Error(`Tipo de migración no válido: ${migrationType}`);
+        }
+        
+        // Calcular totales
+        const totalUpdated = (results.searchUnified?.totalUpdated || 0) + (results.clienteNombre?.totalUpdated || 0);
+        const totalErrors = (results.searchUnified?.totalErrors || 0) + (results.clienteNombre?.totalErrors || 0);
+        const totalRecords = (results.searchUnified?.total || 0) + (results.clienteNombre?.total || 0);
+        
+        // Actualizar log final
+        await databases.updateDocument(
+          config.DATABASE_ID,
+          config.MIGRATION_LOGS_COLLECTION_ID,
+          migrationId,
+          {
+            status2: 'completed',
+            total_records: totalRecords,
+            processed_records: totalUpdated,
+            successful_records: totalUpdated - totalErrors,
+            failed_records: totalErrors,
+            completed_at: new Date().toISOString()
+          }
+        );
+        
+        log(`🎉 Migración completada exitosamente!`);
+      } catch (err) {
+        error(`❌ Error en background: ${err.message}`);
+        
+        // Actualizar log con error
+        try {
+          await databases.updateDocument(
+            config.DATABASE_ID,
+            config.MIGRATION_LOGS_COLLECTION_ID,
+            migrationId,
+            {
+              status2: 'failed',
+              error_message: err.message,
+              completed_at: new Date().toISOString()
+            }
+          );
+        } catch (logError) {
+          error(`❌ No se pudo registrar el fallo: ${logError.message}`);
+        }
       }
-    );
+    })();
     
-    log(`🎉 Migración completada exitosamente!`);
-    
+    // Retornar inmediatamente (202 Accepted) sin esperar el procesamiento
     return res.json({
       ok: true,
       migrationId,
       type: migrationType,
-      results,
-      summary: {
-        totalUpdated,
-        totalErrors,
-        totalRecords
-      }
-    }, 200);
+      message: 'Migración iniciada. Consulta migration_logs para ver el progreso.',
+      status: 'running'
+    }, 202);
     
   } catch (err) {
     error(`❌ Error crítico: ${err.message}`);
