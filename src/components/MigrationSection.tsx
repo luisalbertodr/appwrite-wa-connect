@@ -254,12 +254,12 @@ export const MigrationSection = () => {
                     • Errores: {backendResult.summary?.totalErrors || 0}
                     {backendResult.results?.searchUnified && (
                       <div className="mt-1 text-xs opacity-80">
-                        - Búsqueda unificada: {backendResult.results.searchUnified.totalUpdated} clientes
+                        - Búsqueda unificada: {backendResult.results.searchUnified?.totalUpdated || 0} clientes
                       </div>
                     )}
                     {backendResult.results?.clienteNombre && (
                       <div className="text-xs opacity-80">
-                        - Cliente en citas: {backendResult.results.clienteNombre.totalUpdated} citas
+                        - Cliente en citas: {backendResult.results.clienteNombre?.totalUpdated || 0} citas
                       </div>
                     )}
                   </div>
