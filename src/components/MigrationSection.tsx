@@ -7,6 +7,7 @@ import { Loader2, Database, CheckCircle, AlertCircle, Calendar, Zap } from 'luci
 import { migrateSearchUnified } from '@/scripts/migrate-search-unified';
 import { migrateCitasClienteNombre } from '@/scripts/migrate-citas-cliente-nombre';
 import { functions } from '@/lib/appwrite';
+import { MigrationLogsViewer } from './MigrationLogsViewer';
 
 export const MigrationSection = () => {
   // Estados para migración de clientes (search_unified)
@@ -156,8 +157,11 @@ export const MigrationSection = () => {
 
   return (
     <>
+    {/* 📊 Visor de Logs de Migraciones */}
+    <MigrationLogsViewer />
+    
     {/* 🚀 Sección de Migraciones Backend */}
-    <Card className="mb-6 border-primary/20 bg-primary/5">
+    <Card className="mt-6 mb-6 border-primary/20 bg-primary/5">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Zap className="w-5 h-5 text-primary" />
