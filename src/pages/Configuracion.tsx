@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, ChangeEvent } from 'react';
 import { useAppwriteCollection } from '@/hooks/useAppwrite';
-import { WahaConfig, LipooutUserInput } from '@/types';
-import type { Configuracion, Empleado, Recurso, Proveedor } from '@/types';
+import { WahaConfig, LipooutUserInput, Configuracion } from '@/types';
+import type { Empleado, Recurso, Proveedor, HorarioApertura } from '@/types'; // Importado HorarioApertura
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -32,6 +32,7 @@ import {
   storage,
   IMPORT_BUCKET_ID,
   client,
+  CONFIG_BUCKET_ID, // <-- Se añade la importación de CONFIG_BUCKET_ID
 } from '@/lib/appwrite';
 import { Functions, Models } from 'appwrite';
 import { format } from 'date-fns';
@@ -46,6 +47,20 @@ interface ImportLog extends Models.Document {
     errors?: string[];
     status: 'completed' | 'completed_with_errors' | 'failed';
 }
+
+// Función auxiliar para sanear horarios profundamente
+const sanitizeHorarios = (horarios: Configuracion['horarios']): HorarioApertura[] => {
+    if (!horarios) return [];
+    return horarios.map(h => ({
+        // El dia y abierto se consideran seguros ya que son enums/booleans
+        dia: h.dia,
+        abierto: h.abierto,
+        // Saneamiento robusto de horas: fuerza a string y aplica trim
+        horaInicio: String(h.horaInicio || '08:00').trim(), 
+        horaFin: String(h.horaFin || '21:00').trim(),    
+    }));
+};
+
 
 const Configuracion = () => {
   const { toast } = useToast();
@@ -64,7 +79,7 @@ const Configuracion = () => {
   const [isUploading, setIsUploading] = useState(false);
 
   // --- Estado y Hooks para Configuración Clínica ---
-  const { data: clinicConfig, isLoading: loadingClinicConfig } = useGetConfiguration();
+  const { data: clinicConfig, isLoading: loadingClinicConfig, refetch: refetchClinicConfig } = useGetConfiguration(); 
   const updateClinicMutation = useUpdateConfiguration();
 
   // --- Hooks para Gestión de Entidades ---
@@ -169,7 +184,7 @@ const Configuracion = () => {
     }
   };
 
-  // --- Guardar Configuración Clínica ---
+  // --- Manejador central para guardar Configuración Clínica (sin logo) ---
   const handleSaveClinicConfig = async (data: LipooutUserInput<Configuracion>) => {
        if (!clinicConfig?.$id) {
            toast({ title: "Error", description: "No se encontró el ID de configuración.", variant: "destructive" });
@@ -178,10 +193,78 @@ const Configuracion = () => {
         try {
             await updateClinicMutation.mutateAsync({ id: clinicConfig.$id, data });
             toast({ title: "Configuración de la clínica guardada" });
+            refetchClinicConfig();
         } catch (err) {
             toast({ title: "Error al guardar", description: (err as Error).message, variant: "destructive" });
         }
   };
+
+  // --- Nuevo Manejador para subida de Logo y guardar Configuración ---
+  const handleFileUploadAndSaveConfig = async (file: File) => {
+    if (!clinicConfig?.$id) {
+      toast({ title: "Error", description: "No se encontró el ID de configuración.", variant: "destructive" });
+      return;
+    }
+    
+    // Validar CONFIG_BUCKET_ID 
+    if (!CONFIG_BUCKET_ID) {
+        toast({ title: "Error", description: "CONFIG_BUCKET_ID no está definido. Revisa tus variables de entorno.", variant: "destructive" });
+        return;
+    }
+
+    try {
+      // 1. Subir el archivo de logo a Appwrite Storage
+      toast({ title: "Subiendo Logo...", description: "Por favor, espera.", variant: "default" });
+      // Usamos el ID de archivo 'unique()' para evitar colisiones
+      const fileResult = await storage.createFile(CONFIG_BUCKET_ID, 'unique()', file);
+
+      // 2. Guardamos el ID del archivo como logoUrl
+      const newLogoUrl = fileResult.$id; 
+      
+      // 3. Actualizar el documento de configuración con el nuevo logoUrl
+      // CORRECCIÓN FINAL: Se sanean todos los campos de cadena, numéricos y el array anidado.
+      const updatedData: LipooutUserInput<Configuracion> = {
+          // Campos de cadena OBLIGATORIOS/PRINICIPALES, se fuerzan a string y trim
+          nombreClinica: String(clinicConfig.nombreClinica || '').trim(),
+          cif: String(clinicConfig.cif || '').trim(),
+          serieFactura: String(clinicConfig.serieFactura || '').trim(),
+          seriePresupuesto: String(clinicConfig.seriePresupuesto || '').trim(),
+
+          // Campos de cadena OPCIONALES, se fuerzan a string y trim
+          direccion: String(clinicConfig.direccion || '').trim(),
+          emailContacto: String(clinicConfig.emailContacto || '').trim(),
+          telefonoContacto: String(clinicConfig.telefonoContacto || '').trim(),
+          logoText: String(clinicConfig.logoText || '').trim(),
+          
+          // Campos numéricos (contadores/IVA), se fuerzan a un número predeterminado
+          ultimoNumeroFactura: clinicConfig.ultimoNumeroFactura ?? 0,
+          ultimoNumeroPresupuesto: clinicConfig.ultimoNumeroPresupuesto ?? 0,
+          tipoIvaPredeterminado: clinicConfig.tipoIvaPredeterminado ?? 21,
+          
+          // Campo de array, se sanea profundamente para asegurar la estructura de tiempo
+          horarios: sanitizeHorarios(clinicConfig.horarios),
+
+          // Campo modificado:
+          logoUrl: newLogoUrl, 
+      };
+
+      await updateClinicMutation.mutateAsync({ 
+        id: clinicConfig.$id, 
+        data: updatedData, // <-- Se envía el objeto limpio y saneado
+      });
+      
+      toast({ title: "Logo y Configuración guardados", description: "El logo se ha subido y la URL se ha actualizado.", variant: "success" });
+      refetchClinicConfig(); // Recargar la configuración para que el Header la recoja
+      
+    } catch (error) {
+      toast({ 
+        title: "Error al subir/guardar el Logo", 
+        description: (error as Error).message || "Ocurrió un error inesperado.", 
+        variant: "destructive" 
+      });
+    }
+  };
+
 
   // --- Handlers para Empleados ---
   const handleNuevoEmpleado = () => {
@@ -307,6 +390,7 @@ const Configuracion = () => {
                         isLoading={loadingClinicConfig}
                         isSubmitting={updateClinicMutation.isPending}
                         onSubmit={handleSaveClinicConfig}
+                        onLogoUpload={handleFileUploadAndSaveConfig} // Pasamos el nuevo manejador de subida
                    />
                 </CardContent>
             </Card>
@@ -420,16 +504,12 @@ const Configuracion = () => {
                         let fechaFormateada = 'Fecha inválida';
                         
                         // FIX para RangeError: Invalid time value
-                        // El error ocurre cuando la función format de date-fns recibe un objeto Date no válido.
-                        // El bloque try/catch original no estaba capturando el error correctamente en el entorno de producción.
-                        // Simplificamos la lógica para asegurar que el objeto Date es válido antes de formatear.
                         const fecha = log.timestamp ? new Date(log.timestamp) : null;
 
                         // Solo formateamos si el objeto Date se creó y es válido (!isNaN(getTime()))
                         if (fecha && !isNaN(fecha.getTime())) {
                             fechaFormateada = format(fecha, 'dd/MM/yy HH:mm');
                         }
-                        // FIN FIX
                         
                         return (
                         <TableRow key={log.$id}>

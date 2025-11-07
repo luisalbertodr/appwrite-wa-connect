@@ -4,8 +4,8 @@ export const client = new Client();
 export const storage = new Storage(client);
 
 client
-  .setEndpoint(import.meta.env.VITE_APP_ENDPOINT)
-  .setProject(import.meta.env.VITE_APP_PROJECT_ID);
+  .setEndpoint(import.meta.env.VITE_APP_ENDPOINT as string) // Se asegura el tipado para evitar errores
+  .setProject(import.meta.env.VITE_APP_PROJECT_ID as string); // Se asegura el tipado para evitar errores
 
 export const databases = new Databases(client);
 export const account = new Account(client);
@@ -51,3 +51,7 @@ export const AUDITORIA_COLLECTION_ID = 'auditoria';
 // Buckets de almacenamiento para datos clínicos
 export const DOCUMENTOS_FIRMADOS_BUCKET_ID = 'documentos_firmados_bucket';
 export const FOTOS_SESIONES_BUCKET_ID = 'fotos_sesiones_bucket';
+
+// NUEVO BUCKET PARA ARCHIVOS DE CONFIGURACIÓN (LOGO)
+// Se asume la variable de entorno VITE_APP_CONFIG_BUCKET_ID
+export const CONFIG_BUCKET_ID = import.meta.env.VITE_APP_CONFIG_BUCKET_ID || 'lipoout_config_files';

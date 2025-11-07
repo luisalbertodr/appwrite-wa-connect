@@ -19,4 +19,7 @@ export interface Configuracion {
   ultimoNumeroPresupuesto: number;
   tipoIvaPredeterminado: number;
   horarios?: HorarioApertura[];
+  logoUrl?: string; // URL o ID del archivo de logo personalizado
+  logoText?: string; // Texto que se muestra junto al logo
+  hideLogoText?: boolean; // NUEVO: Ocultar el texto junto al logo
 }

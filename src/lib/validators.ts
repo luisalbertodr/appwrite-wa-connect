@@ -218,6 +218,9 @@ export const configurationSchema = z.object({
   ultimoNumeroFactura: z.number().min(0).optional(),
   ultimoNumeroPresupuesto: z.number().min(0).optional(),
   horarios: z.array(horarioAperturaSchema).optional(),
+  logoUrl: z.string().optional().or(z.literal('')),
+  logoText: z.string().optional().or(z.literal('')),
+  hideLogoText: z.boolean().optional(), // NUEVO
 });
 export type ConfigurationFormData = z.infer<typeof configurationSchema>;
 
