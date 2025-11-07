@@ -284,13 +284,15 @@ module.exports = async ({ req, res, log, error }) => {
         }
         
         // 3. CONSOLIDACIÓN DE LOGS Y ESTRUCTURA DE MENSAJE FINAL (SIMPLIFICADA)
-        let logStatus = 'completed';
+        let logStatus = 'completed'; // Valor por defecto válido
         const totalFailed = totalProcessed - successfulImports;
         
+        // CORRECCIÓN: Usar un estado válido si hay errores.
+        // 'completed_with_errors' NO es válido. Usamos 'failed' si hubo algún error para llamar la atención, 
+        // o podrías usar 'completed' si consideras que el proceso terminó aunque hubo fallos parciales.
+        // Aquí uso 'failed' para mayor seguridad si hubo CUALQUIER error.
         if (importErrors.length > 0) {
-            logStatus = 'completed_with_errors';
-        }
-        if (importErrors.length > 0 && successfulImports === 0) {
+             // OPCIONAL: Si prefieres que aparezca como 'completed' aunque haya errores parciales, cambia esto a 'completed'.
             logStatus = 'failed';
         }
 
@@ -323,7 +325,7 @@ Clientes fallidos: ${totalFailed}`;
         await databases.createDocument(DATABASE_ID, IMPORT_LOGS_COLLECTION_ID, importLogId, {
             file_id: fileId,
             file_name: fileName,
-            status: logStatus,
+            status: logStatus, // AHORA ES UN VALOR VÁLIDO ('completed' o 'failed')
             total_rows: totalProcessed,
             processed_rows: totalProcessed,
             successful_rows: successfulImports,
@@ -350,7 +352,7 @@ Clientes fallidos: ${totalFailed}`;
             await databases.createDocument(DATABASE_ID, IMPORT_LOGS_COLLECTION_ID, ID.unique(), {
                 file_id: fileId, 
                 file_name: fileName, 
-                status: 'failed',
+                status: 'failed', // Valor válido
                 total_rows: totalProcessed,
                 processed_rows: successfulImports,
                 successful_rows: successfulImports,
