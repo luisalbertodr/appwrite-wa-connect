@@ -1,8 +1,25 @@
 const { Client, Databases, Storage, ID, Query, AppwriteException } = require('node-appwrite');
 const Papa = require('papaparse');
 
+// ============= UTILIDADES NECESARIAS =============
+const generateSearchUnified = (cliente) => {
+    const parts = [
+        cliente.nombre_completo,
+        cliente.nomcli,
+        cliente.ape1cli,
+        cliente.tel1cli,
+        cliente.tel2cli,
+        cliente.email,
+        cliente.dnicli,
+        cliente.codcli
+    ].filter(Boolean);
+    
+    return parts.join(' ').toLowerCase().trim();
+};
+// =================================================
+
 module.exports = async ({ req, res, log, error }) => {
-    log('CSV Import Function started.');
+    log('CSV Import Function started (Optimized: Inline Search Unified).');
 
     const client = new Client();
     client
@@ -25,18 +42,23 @@ module.exports = async ({ req, res, log, error }) => {
     let errorSummary = {};
     const timestamp = new Date().toISOString();
     let fileName = 'unknown-file';
+    let fileId = 'unknown'; 
+    const importLogId = ID.unique();
+    
+    const detailedImportResults = []; 
 
-    const addIssue = (issueList, message) => {
-        const messageStr = String(message);
-        issueList.push(messageStr);
+    const addIssue = (issueList, message, rowNumber, codcli) => { 
+        const detail = `Fila ${rowNumber} (Cod: ${codcli || 'N/A'}): ${message}`; 
+        issueList.push(detail);
         try {
-            const errorType = messageStr.split(':')[1]?.split('(')[0].trim() || 'Desconocido';
+            const messageStr = String(message); 
+            const errorType = messageStr.includes('Error') ? messageStr.split(':').shift().trim() : 'Advertencia'; 
             errorSummary[errorType] = (errorSummary[errorType] || 0) + 1;
         } catch (e) {
             errorSummary['Error no categorizado'] = (errorSummary['Error no categorizado'] || 0) + 1;
         }
     };
-
+    
     const calculateAge = (dob) => {
         if (!dob) return 0;
         const birthDate = new Date(dob);
@@ -50,7 +72,8 @@ module.exports = async ({ req, res, log, error }) => {
     };
 
     const validateDniNie = (dni) => {
-        if (!dni) return { isValid: true, message: 'DNI/NIE no proporcionado (advertencia).', isWarning: true };
+        // CORRECCIÓN: Si no hay DNI, se omite la advertencia. Se considera válido con isWarning: false.
+        if (!dni) return { isValid: true, message: 'DNI/NIE no proporcionado (omitido).', isWarning: false };
         dni = dni.toUpperCase().trim();
         const dniRegex = /^(\d{8})([A-Z])$/;
         const nieRegex = /^[XYZ]\d{7}[A-Z]$/;
@@ -90,7 +113,7 @@ module.exports = async ({ req, res, log, error }) => {
         const warnings = {};
     
         if (!clientData.codcli || !/^\d{6}$/.test(clientData.codcli)) errors.codcli = 'El código de cliente es requerido y debe tener 6 dígitos.';
-        if ((isStrict || clientData.nomcli) && !clientData.nomcli) errors.nomcli = 'El nombre es requerido.';
+        if ((isStrict || clientData.nomcli) && !clientData.nomcli) warnings.nomcli = 'El nombre es requerido (advertencia).'; 
         
         if (clientData.email && !/\S+@\S+\.\S+/.test(clientData.email)) {
             errors.email = 'Email inválido.';
@@ -137,7 +160,9 @@ module.exports = async ({ req, res, log, error }) => {
         return undefined;
     };
 
+
     try {
+        // 1. Obtener el archivo más reciente
         log('Searching for the latest file in the import bucket...');
         const fileList = await storage.listFiles(IMPORT_BUCKET_ID, [
             Query.orderDesc('$createdAt'),
@@ -149,16 +174,13 @@ module.exports = async ({ req, res, log, error }) => {
         }
 
         const latestFile = fileList.files[0];
-        const fileId = latestFile.$id;
+        fileId = latestFile.$id;
         fileName = latestFile.name;
 
-        // --- INICIO DE LA MODIFICACIÓN ---
-        // Comprobar si el archivo es un CSV, si no, ignorarlo y salir.
         if (!fileName.toLowerCase().endsWith('.csv')) {
             log(`Ignoring non-CSV file: ${fileName}.`);
             return res.json({ ok: true, message: `Archivo ${fileName} ignorado por no ser CSV.` }, 200);
         }
-        // --- FIN DE LA MODIFICACIÓN ---
 
         log(`Processing CSV file: ${fileName} (ID: ${fileId}) from bucket: ${IMPORT_BUCKET_ID}`);
 
@@ -170,9 +192,10 @@ module.exports = async ({ req, res, log, error }) => {
 
         if (results.errors.length > 0) {
             results.errors.forEach(err => error(`CSV Parsing Error: ${err.message}`));
-            results.errors.forEach(e => addIssue(importErrors, `Error de parseo: ${e.message} en fila ${e.row}`));
+            results.errors.forEach(e => addIssue(importErrors, `Error de parseo: ${e.message} en fila ${e.row}`, e.row, 'N/A'));
         }
 
+        // 2. Procesar cada fila e importar/actualizar (incluyendo nombre_completo y search_unified)
         for (const [index, row] of results.data.entries()) {
             const clientData = row;
             const rowNumber = index + 2;
@@ -194,90 +217,148 @@ module.exports = async ({ req, res, log, error }) => {
                 sexo: ['H', 'M', 'Otro'].includes(clientData.sexo) ? clientData.sexo : undefined,
                 fecalta: convertDate(clientData.fecalta),
             };
+            
+            // Calculo de nombre_completo
+            const nombreCompleto = `${newClientRecord.nomcli || ''} ${newClientRecord.ape1cli || ''}`.trim();
+            const clientToSave = { 
+                ...newClientRecord, 
+                nombre_completo: nombreCompleto
+            };
 
-            const { errors, warnings } = validateClient(newClientRecord, false);
+            const { errors: validationErrors, warnings } = validateClient(newClientRecord, false);
 
-            if (Object.keys(warnings).length > 0) {
-                 Object.values(warnings).forEach(msg => addIssue(importWarnings, `Fila ${rowNumber} (Cod: ${newClientRecord.codcli || 'N/A'}): ${msg}`));
-            }
-
-            if (Object.keys(errors).length > 0) {
-                Object.values(errors).forEach(msg => addIssue(importErrors, `Fila ${rowNumber} (Cod: ${newClientRecord.codcli || 'N/A'}): ${msg}`));
+            if (Object.keys(validationErrors).length > 0) {
+                const errorMsg = `Importación fallida: ${Object.values(validationErrors).join('; ')}`;
+                Object.values(validationErrors).forEach(msg => addIssue(importErrors, msg, rowNumber, newClientRecord.codcli));
+                detailedImportResults.push({ codcli: newClientRecord.codcli, nombre: nombreCompleto, status: 'ERROR', message: errorMsg });
                 continue;
             }
 
             try {
-                const clientToSave = {
-                    ...newClientRecord,
-                    nombre_completo: `${newClientRecord.nomcli || ''} ${newClientRecord.ape1cli || ''}`.trim(),
-                    edad: newClientRecord.fecnac ? calculateAge(newClientRecord.fecnac) : undefined,
-                    importErrors: Object.values(warnings),
-                };
+                // Campos adicionales
+                clientToSave.edad = newClientRecord.fecnac ? calculateAge(newClientRecord.fecnac) : undefined;
+                clientToSave.importErrors = Object.values(warnings);
+                // CÁLCULO Y ASIGNACIÓN DE search_unified INLINE
+                clientToSave.search_unified = generateSearchUnified(clientToSave); 
                 
+                let clientId;
                 const existing = await databases.listDocuments(DATABASE_ID, CLIENTS_COLLECTION_ID, [Query.equal('codcli', newClientRecord.codcli)]);
 
                 if (existing.documents.length > 0) {
                     await databases.updateDocument(DATABASE_ID, CLIENTS_COLLECTION_ID, existing.documents[0].$id, clientToSave);
+                    clientId = existing.documents[0].$id;
                     successfulImports++;
                 } else {
-                    await databases.createDocument(DATABASE_ID, CLIENTS_COLLECTION_ID, ID.unique(), clientToSave);
+                    // USO CORRECTO DE PERMISSIONS: [] como 5to argumento
+                    const newDoc = await databases.createDocument(DATABASE_ID, CLIENTS_COLLECTION_ID, ID.unique(), clientToSave, []); 
+                    clientId = newDoc.$id;
                     successfulImports++;
                 }
+                
+                let statusMsg = `OK`;
+                let finalStatus = 'OK';
+                
+                // Muestra solo otras advertencias que no sean la de DNI
+                const otherWarnings = Object.values(warnings).filter(w => !w.includes('DNI/NIE no proporcionado (omitido).'));
+
+                if (otherWarnings.length > 0) {
+                    statusMsg = `Advertencias: ${otherWarnings.join('; ')}`;
+                    finalStatus = 'WARNING';
+                }
+                
+                addIssue(importWarnings, `Importado/Actualizado correctamente.`, rowNumber, newClientRecord.codcli);
+                
+                detailedImportResults.push({ 
+                    codcli: newClientRecord.codcli, 
+                    nombre: nombreCompleto, 
+                    status: finalStatus, 
+                    message: statusMsg
+                });
+                
             } catch (dbError) {
                 const msg = (dbError instanceof AppwriteException) ? `${dbError.message} (Type: ${dbError.type})` : dbError.message;
                 error(`DB Error for client ${newClientRecord.codcli}: ${msg}`);
-                addIssue(importErrors, `Fila ${rowNumber} (Cod: ${newClientRecord.codcli}): ${msg}`);
+                addIssue(importErrors, `Error de DB: ${msg}`, rowNumber, newClientRecord.codcli);
+                detailedImportResults.push({ codcli: newClientRecord.codcli, nombre: nombreCompleto, status: 'ERROR', message: `Error de BD: ${msg}` });
             }
         }
         
+        // 3. CONSOLIDACIÓN DE LOGS Y ESTRUCTURA DE MENSAJE FINAL (SIMPLIFICADA)
         let logStatus = 'completed';
-        if (importErrors.length > 0 && successfulImports === 0) {
-            logStatus = 'failed';
-        } else if (importErrors.length > 0 || importWarnings.length > 0) {
+        const totalFailed = totalProcessed - successfulImports;
+        
+        if (importErrors.length > 0) {
             logStatus = 'completed_with_errors';
         }
-        
-        const summaryLines = Object.entries(errorSummary).map(([key, value]) => String(`- Total de ${key}: ${value}`));
-        const combinedLog = ['--- RESUMEN ---']
-            .concat(summaryLines)
-            .concat(['--- DETALLES ---'])
-            .concat(importWarnings.map(String))
-            .concat(importErrors.map(String));
+        if (importErrors.length > 0 && successfulImports === 0) {
+            logStatus = 'failed';
+        }
 
-        const logDoc = { 
+        const logHeader = `--- RESUMEN DE IMPORTACIÓN Y MIGRACIÓN INLINE ---
+Clientes procesados: ${totalProcessed}
+Clientes importados/actualizados con éxito (con Búsqueda Unificada): ${successfulImports}
+Clientes fallidos: ${totalFailed}`;
+        
+        let newErrorMessage = logHeader;
+        newErrorMessage += '\n\n--- DETALLE POR CLIENTE ---';
+        newErrorMessage += '\nFormato: [ESTADO] [Cod: CODCLIENTE] Nombre Completo: Errores/Advertencias de Importación';
+        newErrorMessage += '\n\n';
+        
+        const finalClientDetails = [];
+        
+        detailedImportResults.forEach(r => {
+            // El formato de la salida de r.message ya está simplificado, solo se limpia ligeramente para el log final.
+            const message = r.message.replace('Importación/Actualización OK.', 'OK'); 
+            finalClientDetails.push(`[${r.status}] [Cod: ${r.codcli}] ${r.nombre}: ${message}`);
+        });
+        
+        newErrorMessage += finalClientDetails.join('\n');
+        
+        // El resumen técnico ha sido eliminado por solicitud del usuario.
+
+        // 4. Guardar el documento de log final (TRUNCADO A 100,000 CARACTERES)
+        const MAX_LOG_LENGTH = 100000; 
+        const finalMessage = newErrorMessage.substring(0, MAX_LOG_LENGTH); 
+        
+        await databases.createDocument(DATABASE_ID, IMPORT_LOGS_COLLECTION_ID, importLogId, {
             file_id: fileId,
-            file_name: fileName, 
-            status: logStatus === 'completed' ? 'completed' : (logStatus === 'completed_with_errors' ? 'completed' : 'failed'),
+            file_name: fileName,
+            status: logStatus,
             total_rows: totalProcessed,
             processed_rows: totalProcessed,
-            successful_rows: successfulImports, 
-            failed_rows: importErrors.length,
-            error_message: combinedLog.join('\n').substring(0, 1999),
+            successful_rows: successfulImports,
+            failed_rows: totalFailed,
+            error_message: finalMessage, 
             started_at: timestamp,
             completed_at: new Date().toISOString()
-        };
+        }, []); 
 
-        await databases.createDocument(DATABASE_ID, IMPORT_LOGS_COLLECTION_ID, ID.unique(), logDoc);
-        log(`Import log saved for ${fileName}. Status: ${logStatus}`);
         
-        return res.json({ ok: true, message: `Importación finalizada.`, successfulImports, totalProcessed, status: logStatus }, 200);
+        log(`🎉 Importación y Búsqueda Unificada completadas INLINE. ID Log: ${importLogId}. Estado: ${logStatus}`);
+        
+        return res.json({ ok: true, message: `Importación y migración de Búsqueda Unificada finalizadas.`, successfulImports, totalProcessed, status: logStatus }, 200);
 
     } catch (err) {
-        error(`Unhandled error during import: ${err.message}`);
+        // 5. MANEJO DE ERROR CRÍTICO
+        error(`Unhandled error during import/migration: ${err.message}`);
         const errorMessage = (err instanceof AppwriteException) ? `${err.message} (Type: ${err.type})` : err.message;
+        
         try {
+            const MAX_LOG_LENGTH = 100000;
+            const finalCriticalMessage = `ERROR CRÍTICO (Importación/Migración): ${errorMessage}`.substring(0, MAX_LOG_LENGTH); 
+            
             await databases.createDocument(DATABASE_ID, IMPORT_LOGS_COLLECTION_ID, ID.unique(), {
-                file_id: 'unknown',
+                file_id: fileId, 
                 file_name: fileName, 
                 status: 'failed',
                 total_rows: totalProcessed,
-                processed_rows: 0,
-                successful_rows: 0,
-                failed_rows: totalProcessed,
-                error_message: `Error no controlado: ${errorMessage}`.substring(0, 1999),
+                processed_rows: successfulImports,
+                successful_rows: successfulImports,
+                failed_rows: totalProcessed - successfulImports,
+                error_message: finalCriticalMessage,
                 started_at: timestamp,
                 completed_at: new Date().toISOString()
-            });
+            }, []);
         } catch (logError) {
             error(`Failed to save failure log: ${logError.message}`);
         }

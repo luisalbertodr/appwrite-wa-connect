@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, ChangeEvent } from 'react';
 import { useAppwriteCollection } from '@/hooks/useAppwrite';
 import { WahaConfig, LipooutUserInput, Configuracion } from '@/types';
-import type { Empleado, Recurso, Proveedor, HorarioApertura } from '@/types'; // Importado HorarioApertura
+import type { Empleado, Recurso, Proveedor, HorarioApertura } from '@/types'; 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,7 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { Upload, Loader2, Save, Settings, Server, Users, Package, Building2, Plus, Pencil, Trash2, Moon, Shield, PackageOpen } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area'; // <-- IMPORTACIÓN CORREGIDA
+import { Upload, Loader2, Save, Settings, Server, Users, Package, Building2, Plus, Pencil, Trash2, Moon, Shield, PackageOpen, FileText, X, RefreshCw } from 'lucide-react'; // <-- ICONOS DE LUCIDE-REACT
 import { ThemeToggle } from '@/components/theme-toggle';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { ConfigurationForm } from '@/components/forms/ConfigurationForm';
@@ -19,7 +20,6 @@ import { RecursoForm } from '@/components/forms/RecursoForm';
 import { ProveedorForm } from '@/components/forms/ProveedorForm';
 import { PermisosTab } from '@/components/permisos/PermisosTab';
 import { FamiliasTab } from '@/components/FamiliasTab';
-import { MigrationSection } from '@/components/MigrationSection';
 import { useGetConfiguration, useUpdateConfiguration } from '@/hooks/useConfiguration';
 import { useGetEmpleados, useCreateEmpleado, useUpdateEmpleado, useDeleteEmpleado } from '@/hooks/useEmpleados';
 import { useGetRecursos, useCreateRecurso, useUpdateRecurso, useDeleteRecurso } from '@/hooks/useRecursos';
@@ -32,10 +32,11 @@ import {
   storage,
   IMPORT_BUCKET_ID,
   client,
-  CONFIG_BUCKET_ID, // <-- Se añade la importación de CONFIG_BUCKET_ID
+  CONFIG_BUCKET_ID, 
 } from '@/lib/appwrite';
 import { Functions, Models } from 'appwrite';
 import { format } from 'date-fns';
+import { es } from 'date-fns/locale'; 
 
 const functions = new Functions(client);
 
@@ -46,6 +47,9 @@ interface ImportLog extends Models.Document {
     totalProcessed: number;
     errors?: string[];
     status: 'completed' | 'completed_with_errors' | 'failed';
+    successful_rows: number; 
+    failed_rows: number; 
+    error_message?: string; 
 }
 
 // Función auxiliar para sanear horarios profundamente
@@ -77,12 +81,14 @@ const Configuracion = () => {
   const importLogs = importLogsData as ImportLog[];
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [logSheetOpen, setLogSheetOpen] = useState(false); 
+  const [selectedLogDetail, setSelectedLogDetail] = useState<ImportLog | null>(null); 
 
   // --- Estado y Hooks para Configuración Clínica ---
   const { data: clinicConfig, isLoading: loadingClinicConfig, refetch: refetchClinicConfig } = useGetConfiguration(); 
   const updateClinicMutation = useUpdateConfiguration();
 
-  // --- Hooks para Gestión de Entidades ---
+  // --- Hooks para Gestión de Entidades (sin cambios) ---
   const { data: empleados, isLoading: loadingEmpleados } = useGetEmpleados();
   const deleteEmpleadoMutation = useDeleteEmpleado();
   
@@ -92,7 +98,7 @@ const Configuracion = () => {
   const { data: proveedores, isLoading: loadingProveedores } = useGetProveedores();
   const deleteProveedorMutation = useDeleteProveedor();
 
-  // --- Estados para Sheets de Gestión ---
+  // --- Estados para Sheets de Gestión (sin cambios) ---
   const [empleadoSheetOpen, setEmpleadoSheetOpen] = useState(false);
   const [empleadoEditing, setEmpleadoEditing] = useState<Empleado | null>(null);
   const createEmpleadoMutation = useCreateEmpleado();
@@ -168,23 +174,33 @@ const Configuracion = () => {
     }
   };
 
-  // Subir archivo CSV
+  // Subir archivo CSV (ahora incluye implícitamente las migraciones)
   const handleFileUpload = async () => {
     if (!selectedFile) return;
     setIsUploading(true);
     try {
-      await storage.createFile(IMPORT_BUCKET_ID, 'unique()', selectedFile);
-      toast({ title: 'Archivo subido', description: 'La importación se procesará en segundo plano.' });
+      // La subida del archivo es el trigger de la función 'ImportCsvFunction'
+      await storage.createFile(IMPORT_BUCKET_ID, 'unique()', selectedFile); 
+      
+      toast({ 
+        title: 'Archivo subido y proceso iniciado', 
+        description: 'La importación de clientes y las migraciones de backend se procesarán en segundo plano. Consulta el historial de logs.',
+      });
+      
       setSelectedFile(null);
-      setTimeout(reloadLogs, 5000);
+      setTimeout(reloadLogs, 5000); 
     } catch (error) {
       toast({ title: 'Error al subir archivo', description: (error as Error).message, variant: 'destructive' });
     } finally {
       setIsUploading(false);
     }
   };
-
-  // --- Manejador central para guardar Configuración Clínica (sin logo) ---
+  
+  const handleViewLogDetail = (log: ImportLog) => {
+    setSelectedLogDetail(log);
+  };
+  
+  // Manejador central para guardar Configuración Clínica (sin logo)
   const handleSaveClinicConfig = async (data: LipooutUserInput<Configuracion>) => {
        if (!clinicConfig?.$id) {
            toast({ title: "Error", description: "No se encontró el ID de configuración.", variant: "destructive" });
@@ -199,7 +215,7 @@ const Configuracion = () => {
         }
   };
 
-  // --- Nuevo Manejador para subida de Logo y guardar Configuración ---
+  // Manejador para subida de Logo y guardar Configuración
   const handleFileUploadAndSaveConfig = async (file: File) => {
     if (!clinicConfig?.$id) {
       toast({ title: "Error", description: "No se encontró el ID de configuración.", variant: "destructive" });
@@ -215,46 +231,33 @@ const Configuracion = () => {
     try {
       // 1. Subir el archivo de logo a Appwrite Storage
       toast({ title: "Subiendo Logo...", description: "Por favor, espera.", variant: "default" });
-      // Usamos el ID de archivo 'unique()' para evitar colisiones
       const fileResult = await storage.createFile(CONFIG_BUCKET_ID, 'unique()', file);
-
-      // 2. Guardamos el ID del archivo como logoUrl
       const newLogoUrl = fileResult.$id; 
       
       // 3. Actualizar el documento de configuración con el nuevo logoUrl
-      // CORRECCIÓN FINAL: Se sanean todos los campos de cadena, numéricos y el array anidado.
       const updatedData: LipooutUserInput<Configuracion> = {
-          // Campos de cadena OBLIGATORIOS/PRINICIPALES, se fuerzan a string y trim
           nombreClinica: String(clinicConfig.nombreClinica || '').trim(),
           cif: String(clinicConfig.cif || '').trim(),
           serieFactura: String(clinicConfig.serieFactura || '').trim(),
           seriePresupuesto: String(clinicConfig.seriePresupuesto || '').trim(),
-
-          // Campos de cadena OPCIONALES, se fuerzan a string y trim
           direccion: String(clinicConfig.direccion || '').trim(),
           emailContacto: String(clinicConfig.emailContacto || '').trim(),
           telefonoContacto: String(clinicConfig.telefonoContacto || '').trim(),
           logoText: String(clinicConfig.logoText || '').trim(),
-          
-          // Campos numéricos (contadores/IVA), se fuerzan a un número predeterminado
           ultimoNumeroFactura: clinicConfig.ultimoNumeroFactura ?? 0,
           ultimoNumeroPresupuesto: clinicConfig.ultimoNumeroPresupuesto ?? 0,
           tipoIvaPredeterminado: clinicConfig.tipoIvaPredeterminado ?? 21,
-          
-          // Campo de array, se sanea profundamente para asegurar la estructura de tiempo
           horarios: sanitizeHorarios(clinicConfig.horarios),
-
-          // Campo modificado:
           logoUrl: newLogoUrl, 
       };
 
       await updateClinicMutation.mutateAsync({ 
         id: clinicConfig.$id, 
-        data: updatedData, // <-- Se envía el objeto limpio y saneado
+        data: updatedData, 
       });
       
       toast({ title: "Logo y Configuración guardados", description: "El logo se ha subido y la URL se ha actualizado.", variant: "success" });
-      refetchClinicConfig(); // Recargar la configuración para que el Header la recoja
+      refetchClinicConfig(); 
       
     } catch (error) {
       toast({ 
@@ -264,9 +267,8 @@ const Configuracion = () => {
       });
     }
   };
-
-
-  // --- Handlers para Empleados ---
+  
+  // --- Resto de Handlers para Entidades (sin cambios) ---
   const handleNuevoEmpleado = () => {
     setEmpleadoEditing(null);
     setEmpleadoSheetOpen(true);
@@ -292,7 +294,6 @@ const Configuracion = () => {
     }
   };
 
-  // --- Handlers para Recursos ---
   const handleNuevoRecurso = () => {
     setRecursoEditing(null);
     setRecursoSheetOpen(true);
@@ -318,7 +319,6 @@ const Configuracion = () => {
     }
   };
 
-  // --- Handlers para Proveedores ---
   const handleNuevoProveedor = () => {
     setProveedorEditing(null);
     setProveedorSheetOpen(true);
@@ -344,6 +344,7 @@ const Configuracion = () => {
     }
   };
 
+
   return (
     <div className="space-y-6">
        <div>
@@ -351,12 +352,12 @@ const Configuracion = () => {
         <p className="text-muted-foreground">Ajustes generales del sistema.</p>
        </div>
 
-      <Tabs defaultValue="waha">
-        <TabsList className="mb-4 grid w-full grid-cols-9 gap-1">
-          <TabsTrigger value="apariencia"><Moon className="w-4 h-4 mr-2"/> Apariencia</TabsTrigger>
+      <Tabs defaultValue="clinica">
+        <TabsList className="mb-4 grid w-full grid-cols-8 gap-1"> 
+          {/* Se elimina la pestaña Apariencia */}
           <TabsTrigger value="clinica"><Settings className="w-4 h-4 mr-2"/> Clínica</TabsTrigger>
           <TabsTrigger value="waha"><Server className="w-4 h-4 mr-2"/> WAHA</TabsTrigger>
-          <TabsTrigger value="import"><Upload className="w-4 h-4 mr-2"/> Import</TabsTrigger>
+          <TabsTrigger value="importar"><Upload className="w-4 h-4 mr-2"/> Importar</TabsTrigger> 
           <TabsTrigger value="empleados"><Users className="w-4 h-4 mr-2"/> Empleados</TabsTrigger>
           <TabsTrigger value="recursos"><Package className="w-4 h-4 mr-2"/> Recursos</TabsTrigger>
           <TabsTrigger value="proveedores"><Building2 className="w-4 h-4 mr-2"/> Proveedores</TabsTrigger>
@@ -364,39 +365,39 @@ const Configuracion = () => {
           <TabsTrigger value="permisos"><Shield className="w-4 h-4 mr-2"/> Permisos</TabsTrigger>
         </TabsList>
 
-        {/* --- Contenido Pestaña Apariencia --- */}
-        <TabsContent value="apariencia">
-          <Card>
-            <CardHeader>
-              <CardTitle>Tema de la Aplicación</CardTitle>
-              <CardDescription>Personaliza la apariencia de la interfaz.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ThemeToggle />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* --- Contenido Pestaña Clínica --- */}
+        {/* --- Contenido Pestaña Clínica (MODIFICADO para integrar Tema) --- */}
         <TabsContent value="clinica">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Datos de la Empresa</CardTitle>
-                    <CardDescription>Información general y configuración de facturación.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                   <ConfigurationForm
-                        configInicial={clinicConfig}
-                        isLoading={loadingClinicConfig}
-                        isSubmitting={updateClinicMutation.isPending}
-                        onSubmit={handleSaveClinicConfig}
-                        onLogoUpload={handleFileUploadAndSaveConfig} // Pasamos el nuevo manejador de subida
-                   />
-                </CardContent>
-            </Card>
+            <div className="space-y-6">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Datos de la Empresa</CardTitle>
+                        <CardDescription>Información general y configuración de facturación.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                       <ConfigurationForm
+                            configInicial={clinicConfig}
+                            isLoading={loadingClinicConfig}
+                            isSubmitting={updateClinicMutation.isPending}
+                            onSubmit={handleSaveClinicConfig}
+                            onLogoUpload={handleFileUploadAndSaveConfig}
+                       />
+                    </CardContent>
+                </Card>
+                
+                {/* NUEVO CARD TEMA - Integrado de la antigua pestaña Apariencia */}
+                <Card>
+                    <CardHeader>
+                      <CardTitle>Tema</CardTitle>
+                      <CardDescription>Ajusta el tema visual de la aplicación (Claro, Oscuro o Sistema).</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <ThemeToggle /> {/* Componente de botones reducido */}
+                    </CardContent>
+                </Card>
+            </div>
         </TabsContent>
 
-        {/* --- Contenido Pestaña WAHA --- */}
+        {/* --- Contenido Pestaña WAHA (sin cambios) --- */}
         <TabsContent value="waha">
            <Card>
                 <CardHeader>
@@ -452,95 +453,44 @@ const Configuracion = () => {
             </Card>
         </TabsContent>
 
-        {/* --- Contenido Pestaña Importación --- */}
-        <TabsContent value="import">
+        {/* --- Contenido Pestaña Importar (MODIFICADO) --- */}
+        <TabsContent value="importar"> 
           <div className="space-y-6">
-            {/* Sección de Migración */}
-            <MigrationSection />
             
-            {/* Sección de Importación CSV */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <Card>
               <CardHeader>
-                <CardTitle>Subir Archivo CSV</CardTitle>
-                <CardDescription>Selecciona el archivo CSV para importar clientes.</CardDescription>
+                <CardTitle>Subir Archivo CSV (Clientes + Migraciones)</CardTitle>
+                <CardDescription>
+                  Selecciona un archivo CSV. Al iniciar la importación, se procesarán los clientes y se activarán automáticamente las migraciones de backend necesarias (Búsqueda Unificada y Cliente en Citas).
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <Input type="file" accept=".csv" onChange={handleFileChange} />
                 {selectedFile && <p className="text-sm text-muted-foreground">Archivo seleccionado: {selectedFile.name}</p>}
-                <Button onClick={handleFileUpload} disabled={!selectedFile || isUploading}>
-                  {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
-                  {isUploading ? 'Subiendo...' : 'Iniciar Importación'}
-                </Button>
+                
+                <div className="flex justify-between items-center flex-wrap gap-2">
+                  <Button onClick={handleFileUpload} disabled={!selectedFile || isUploading}>
+                    {isUploading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Upload className="mr-2 h-4 w-4" />}
+                    {isUploading ? 'Subiendo e Iniciando...' : 'Iniciar Importación'}
+                  </Button>
+                  
+                  {/* Botón para abrir el visor de Logs - Única ventana de logs */}
+                  <Button variant="outline" onClick={() => { setLogSheetOpen(true); reloadLogs(); }}>
+                    <FileText className="mr-2 h-4 w-4" />
+                    Ver Historial de Logs
+                  </Button>
+                </div>
+                
                 <p className="text-xs text-muted-foreground">
                   Asegúrate de que el CSV tenga las columnas: `codcli`, `nomcli`, `ape1cli`, `email`, `dnicli`, `dircli`, `codposcli`, `pobcli`, `procli`, `tel1cli`, `tel2cli`, `fecnac` (YYYY-MM-DD), `enviar` (1 o 0), `sexo` (H/M/Otro), `fecalta` (YYYY-MM-DD).
                 </p>
               </CardContent>
             </Card>
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div className="space-y-1">
-                  <CardTitle>Historial de Importaciones</CardTitle>
-                  <CardDescription>Últimas importaciones realizadas.</CardDescription>
-                </div>
-                <Button variant="outline" size="sm" onClick={reloadLogs} disabled={loadingLogs}>
-                  {loadingLogs ? <Loader2 className="h-4 w-4 animate-spin"/> : "Refrescar"}
-                </Button>
-              </CardHeader>
-              <CardContent>
-                {loadingLogs ? <LoadingSpinner /> : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Fecha</TableHead>
-                        <TableHead>Archivo</TableHead>
-                        <TableHead>Estado</TableHead>
-                        <TableHead>Resultado</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {importLogs && importLogs.length > 0 ? importLogs.map(log => {
-                        // Validar y formatear la fecha de forma segura
-                        let fechaFormateada = 'Fecha inválida';
-                        
-                        // FIX para RangeError: Invalid time value
-                        const fecha = log.timestamp ? new Date(log.timestamp) : null;
-
-                        // Solo formateamos si el objeto Date se creó y es válido (!isNaN(getTime()))
-                        if (fecha && !isNaN(fecha.getTime())) {
-                            fechaFormateada = format(fecha, 'dd/MM/yy HH:mm');
-                        }
-                        
-                        return (
-                        <TableRow key={log.$id}>
-                          <TableCell>{fechaFormateada}</TableCell>
-                          <TableCell className="truncate max-w-[150px]">{log.filename}</TableCell>
-                          <TableCell>
-                            <Badge variant={log.status === 'completed' ? 'default' : log.status === 'completed_with_errors' ? 'secondary' : 'destructive'}>
-                              {log.status === 'completed' ? 'Completado' : log.status === 'completed_with_errors' ? 'Con Errores' : 'Fallido'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>
-                            {log.successfulImports}/{log.totalProcessed}
-                            {log.errors && log.errors.length > 0 && <span className="text-destructive"> ({log.errors.length} err.)</span>}
-                          </TableCell>
-                        </TableRow>
-                        );
-                      }) : (
-                          <TableRow>
-                              <TableCell colSpan={4} className="text-center text-muted-foreground">No hay logs de importación.</TableCell>
-                          </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                )}
-              </CardContent>
-            </Card>
-            </div>
+            
           </div>
         </TabsContent>
 
-        {/* --- Contenido Pestaña Empleados --- */}
+        {/* --- Contenido Pestaña Empleados (sin cambios) --- */}
         <TabsContent value="empleados">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
@@ -594,7 +544,7 @@ const Configuracion = () => {
           </Card>
         </TabsContent>
 
-        {/* --- Contenido Pestaña Recursos --- */}
+        {/* --- Contenido Pestaña Recursos (sin cambios) --- */}
         <TabsContent value="recursos">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
@@ -648,7 +598,7 @@ const Configuracion = () => {
           </Card>
         </TabsContent>
 
-        {/* --- Contenido Pestaña Proveedores --- */}
+        {/* --- Contenido Pestaña Proveedores (sin cambios) --- */}
         <TabsContent value="proveedores">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
@@ -704,18 +654,18 @@ const Configuracion = () => {
           </Card>
         </TabsContent>
 
-        {/* --- Contenido Pestaña Familias --- */}
+        {/* --- Contenido Pestaña Familias (sin cambios) --- */}
         <TabsContent value="familias">
           <FamiliasTab />
         </TabsContent>
 
-        {/* --- Contenido Pestaña Permisos --- */}
+        {/* --- Contenido Pestaña Permisos (sin cambios) --- */}
         <TabsContent value="permisos">
           <PermisosTab />
         </TabsContent>
       </Tabs>
 
-      {/* --- Sheets para Gestión de Entidades --- */}
+      {/* --- Sheets para Gestión de Entidades (sin cambios) --- */}
       <Sheet open={empleadoSheetOpen} onOpenChange={setEmpleadoSheetOpen}>
         <SheetContent className="sm:max-w-[600px] overflow-y-auto">
           <SheetHeader>
@@ -752,6 +702,117 @@ const Configuracion = () => {
             onSubmit={handleSaveProveedor}
             isSubmitting={createProveedorMutation.isPending || updateProveedorMutation.isPending}
           />
+        </SheetContent>
+      </Sheet>
+      
+      {/* --- Sheet para Visor de Logs de Importación (Listado de Logs) --- */}
+      <Sheet open={logSheetOpen} onOpenChange={setLogSheetOpen}>
+        <SheetContent className="sm:max-w-[700px] w-full flex flex-col">
+          <SheetHeader>
+            <SheetTitle>Historial de Logs de Importación</SheetTitle>
+            <div className="text-sm text-muted-foreground">
+                Últimas importaciones de clientes y estado de las migraciones asociadas.
+            </div>
+          </SheetHeader>
+          <div className="space-y-4 pt-4 flex-1 overflow-hidden">
+            <div className="flex justify-end">
+              <Button variant="outline" size="sm" onClick={reloadLogs} disabled={loadingLogs}>
+                {loadingLogs ? <Loader2 className="h-4 w-4 animate-spin mr-2"/> : <RefreshCw className="h-4 w-4 mr-2"/>} Refrescar Logs
+              </Button>
+            </div>
+            
+            {/* Tabla de Logs de Importación (Listado) */}
+            <ScrollArea className="h-[calc(100vh-250px)] rounded-md border">
+              {loadingLogs ? (
+                <div className="text-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">Cargando logs...</p>
+                </div>
+              ) : importLogs && importLogs.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Fecha</TableHead>
+                      <TableHead>Archivo</TableHead>
+                      <TableHead>Estado</TableHead>
+                      <TableHead>Resultado</TableHead>
+                      <TableHead className="text-right">Detalles</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {importLogs.map(log => {
+                      let fechaFormateada = '-';
+                      const fecha = log.timestamp ? new Date(log.timestamp) : null;
+                      if (fecha && !isNaN(fecha.getTime())) {
+                          fechaFormateada = format(fecha, 'dd/MM/yy HH:mm', { locale: es });
+                      }
+                      
+                      const isError = log.status === 'failed' || log.status === 'completed_with_errors';
+
+                      return (
+                      <TableRow key={log.$id} className={isError ? 'bg-red-50/50 dark:bg-red-950/20' : ''}>
+                        <TableCell className="text-xs">{fechaFormateada}</TableCell>
+                        <TableCell className="truncate max-w-[100px] text-xs">{log.filename}</TableCell>
+                        <TableCell>
+                          <Badge variant={log.status === 'completed' ? 'default' : log.status === 'completed_with_errors' ? 'secondary' : 'destructive'} className='text-xs'>
+                            {log.status === 'completed' ? 'OK' : log.status === 'completed_with_errors' ? 'Con Errores' : 'Fallido'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className='text-xs'>
+                          {log.successful_rows || 0}/{log.total_rows || 0}
+                          {(log.failed_rows || 0) > 0 && <span className="text-destructive"> ({(log.failed_rows || 0)} err.)</span>}
+                        </TableCell>
+                        <TableCell className="text-right">
+                           <Button variant="ghost" size="sm" onClick={() => handleViewLogDetail(log)} disabled={!log.error_message}>
+                             <FileText className="w-4 h-4"/>
+                           </Button>
+                        </TableCell>
+                      </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                    No hay logs de importación.
+                </div>
+              )}
+            </ScrollArea>
+          </div>
+        </SheetContent>
+      </Sheet>
+      
+      {/* --- Sheet para Detalle del Log (Pop-up para log.error_message) --- */}
+      <Sheet open={!!selectedLogDetail} onOpenChange={(open) => !open && setSelectedLogDetail(null)}>
+        <SheetContent className="sm:max-w-[700px] w-full flex flex-col">
+          <SheetHeader>
+            <SheetTitle>
+                Detalles del Log
+                <span className={`ml-2 text-sm font-normal text-muted-foreground`}>
+                    {selectedLogDetail?.filename}
+                </span>
+            </SheetTitle>
+            <Button 
+                variant="ghost" 
+                size="sm" 
+                className="absolute right-4 top-4"
+                onClick={() => setSelectedLogDetail(null)}
+            >
+                <X className="w-4 h-4"/>
+            </Button>
+            <div className="text-sm text-muted-foreground">
+                 Clientes procesados: <span className="font-semibold">{selectedLogDetail?.total_rows || 0}</span>. 
+                 Fallos: <span className={(selectedLogDetail?.failed_rows || 0) > 0 ? 'text-destructive font-semibold' : 'font-semibold'}>{selectedLogDetail?.failed_rows || 0}</span>.
+            </div>
+          </SheetHeader>
+          <div className="flex-1 overflow-hidden pt-4">
+            <h3 className="text-lg font-semibold mb-2">Mensaje Detallado (Cliente por Cliente)</h3>
+            <ScrollArea className="h-full max-h-[calc(100vh-200px)] rounded-md border p-4 bg-muted/50 font-mono text-xs">
+              <pre className="whitespace-pre-wrap">
+                {selectedLogDetail?.error_message || "No hay mensajes de error o detalle para este log."}
+              </pre>
+            </ScrollArea>
+          </div>
         </SheetContent>
       </Sheet>
     </div>
