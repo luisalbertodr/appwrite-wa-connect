@@ -1,4 +1,5 @@
 import { LipooutDocument } from './index';
+import { TipoArticulo } from './articulo.types'; // Importación necesaria
 
 /**
  * Composición de artículos dentro de un bono
@@ -7,7 +8,7 @@ import { LipooutDocument } from './index';
 export interface ComposicionBono {
   articulo_id: string;
   articulo_nombre: string;
-  articulo_tipo: 'servicio' | 'producto';
+  articulo_tipo: TipoArticulo; // MODIFICADO: Puede ser servicio, producto o bono
   cantidad: number; // Sesiones o unidades incluidas (usado en composicion_comprada)
   cantidad_restante: number; // Sesiones o unidades restantes (usado en composicion_restante)
   precio_unitario: number; // Precio por unidad/sesión

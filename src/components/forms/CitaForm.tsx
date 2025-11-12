@@ -253,7 +253,11 @@ export const CitaForm = ({ citaInicial, fechaInicial, empleadoInicial, onSubmit,
     // Calcular precio total (solo artículos con precio, no tiempos no billables)
     const total = articulosProgramados.reduce((sum, item) => {
       if (esTiempoNoBillable(item)) return sum;
-      return sum + (item.precio * item.cantidad);
+      
+      // NUEVA LÓGICA: Si hay un bono_usado, el precio para esta cita es 0, ya está pagado por el bono.
+      const precioFinal = item.bono_usado ? 0 : item.precio;
+
+      return sum + (precioFinal * item.cantidad);
     }, 0);
     
     // Calcular duración total: desde el primer item hasta el final del último
@@ -1021,7 +1025,11 @@ export const CitaForm = ({ citaInicial, fechaInicial, empleadoInicial, onSubmit,
                                   </p>
                                   <p className="text-sm text-muted-foreground">
                                     {esTiempo ? 'Tiempo personalizado' : (item as ArticuloEnCita).tipo}
-                                    {!esTiempo && ` - ${(item as ArticuloEnCita).precio.toFixed(2)}€`}
+                                    {!esTiempo && 
+                                      (item as ArticuloEnCita).bono_usado ? 
+                                      <span className="text-green-600 font-semibold ml-1">Gratis (Bono)</span> :
+                                      ` - ${(item as ArticuloEnCita).precio.toFixed(2)}€`
+                                    }
                                   </p>
                                 </div>
                                 <Button
