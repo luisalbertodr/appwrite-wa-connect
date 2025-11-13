@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, ChangeEvent } from 'react';
 import { useAppwriteCollection } from '@/hooks/useAppwrite';
-import { WahaConfig, LipooutUserInput, Configuracion } from '@/types';
-import type { Empleado, Recurso, Proveedor, HorarioApertura } from '@/types'; 
+import { WahaConfig, LipooutUserInput } from '@/types';
+import type { Empleado, Recurso, Proveedor, HorarioApertura, Configuracion } from '@/types'; 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,8 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
-import { ScrollArea } from '@/components/ui/scroll-area'; // <-- IMPORTACIÓN CORREGIDA
-import { Upload, Loader2, Save, Settings, Server, Users, Package, Building2, Plus, Pencil, Trash2, Moon, Shield, PackageOpen, FileText, X, RefreshCw } from 'lucide-react'; // <-- ICONOS DE LUCIDE-REACT
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Upload, Loader2, Save, Settings, Server, Users, Package, Building2, Plus, Pencil, Trash2, Shield, PackageOpen, FileText, X, RefreshCw, Briefcase } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import LoadingSpinner from '@/components/LoadingSpinner';
 import { ConfigurationForm } from '@/components/forms/ConfigurationForm';
@@ -20,6 +20,7 @@ import { RecursoForm } from '@/components/forms/RecursoForm';
 import { ProveedorForm } from '@/components/forms/ProveedorForm';
 import { PermisosTab } from '@/components/permisos/PermisosTab';
 import { FamiliasTab } from '@/components/FamiliasTab';
+import { EmpresasTab } from '@/components/EmpresasTab'; 
 import { useGetConfiguration, useUpdateConfiguration } from '@/hooks/useConfiguration';
 import { useGetEmpleados, useCreateEmpleado, useUpdateEmpleado, useDeleteEmpleado } from '@/hooks/useEmpleados';
 import { useGetRecursos, useCreateRecurso, useUpdateRecurso, useDeleteRecurso } from '@/hooks/useRecursos';
@@ -43,8 +44,7 @@ const functions = new Functions(client);
 interface ImportLog extends Models.Document {
     timestamp: string;
     filename: string;
-    successfulImports: number;
-    totalProcessed: number;
+    totalProcessed: number; 
     errors?: string[];
     status: 'completed' | 'completed_with_errors' | 'failed';
     successful_rows: number; 
@@ -68,6 +68,11 @@ const sanitizeHorarios = (horarios: Configuracion['horarios']): HorarioApertura[
 
 const Configuracion = () => {
   const { toast } = useToast();
+  
+  // --- SIMULACIÓN DE ROL DE ADMINISTRADOR ---
+  // CORRECCIÓN 6133: Se mantiene la declaración de 'isAdmin'
+  const [isAdmin] = useState(true); 
+  // --- FIN SIMULACIÓN ---
   
   // --- Estado y Hooks para Configuración WAHA ---
   const { data: configs, update: updateWahaConfig, loading: loadingWahaConfig, reload: reloadWahaConfig } = useAppwriteCollection<WahaConfig>(CONFIG_COLLECTION_ID);
@@ -207,7 +212,13 @@ const Configuracion = () => {
            return;
        }
         try {
-            await updateClinicMutation.mutateAsync({ id: clinicConfig.$id, data });
+            // Asegurar empresa_id al guardar
+            const dataToSave: LipooutUserInput<Configuracion> = {
+                 ...data,
+                 empresa_id: clinicConfig.empresa_id,
+            };
+            
+            await updateClinicMutation.mutateAsync({ id: clinicConfig.$id, data: dataToSave });
             toast({ title: "Configuración de la clínica guardada" });
             refetchClinicConfig();
         } catch (err) {
@@ -234,8 +245,10 @@ const Configuracion = () => {
       const fileResult = await storage.createFile(CONFIG_BUCKET_ID, 'unique()', file);
       const newLogoUrl = fileResult.$id; 
       
-      // 3. Actualizar el documento de configuración con el nuevo logoUrl
+      // 2. Crear objeto de actualización
       const updatedData: LipooutUserInput<Configuracion> = {
+          // Incluir empresa_id al guardar
+          empresa_id: clinicConfig.empresa_id,
           nombreClinica: String(clinicConfig.nombreClinica || '').trim(),
           cif: String(clinicConfig.cif || '').trim(),
           serieFactura: String(clinicConfig.serieFactura || '').trim(),
@@ -251,12 +264,14 @@ const Configuracion = () => {
           logoUrl: newLogoUrl, 
       };
 
+      // 3. Actualizar el documento de configuración con el nuevo logoUrl
       await updateClinicMutation.mutateAsync({ 
         id: clinicConfig.$id, 
         data: updatedData, 
       });
       
-      toast({ title: "Logo y Configuración guardados", description: "El logo se ha subido y la URL se ha actualizado.", variant: "success" });
+      // CORRECCIÓN 2322: Se cambia "success" a "default"
+      toast({ title: "Logo y Configuración guardados", description: "El logo se ha subido y la URL se ha actualizado.", variant: "default" });
       refetchClinicConfig(); 
       
     } catch (error) {
@@ -352,9 +367,14 @@ const Configuracion = () => {
         <p className="text-muted-foreground">Ajustes generales del sistema.</p>
        </div>
 
-      <Tabs defaultValue="clinica">
-        <TabsList className="mb-4 grid w-full grid-cols-8 gap-1"> 
-          {/* Se elimina la pestaña Apariencia */}
+      <Tabs defaultValue="empresas">
+        {/* CORRECCIÓN: Se usa 'isAdmin' en los condicionales */}
+        <TabsList className={`mb-4 flex flex-wrap w-full gap-1`}> 
+          {/* NUEVA PESTAÑA EMPRESAS (Solo para Admin) */}
+          {isAdmin && ( 
+              <TabsTrigger value="empresas"><Briefcase className="w-4 h-4 mr-2"/> Empresas</TabsTrigger>
+          )}
+          
           <TabsTrigger value="clinica"><Settings className="w-4 h-4 mr-2"/> Clínica</TabsTrigger>
           <TabsTrigger value="waha"><Server className="w-4 h-4 mr-2"/> WAHA</TabsTrigger>
           <TabsTrigger value="importar"><Upload className="w-4 h-4 mr-2"/> Importar</TabsTrigger> 
@@ -364,6 +384,13 @@ const Configuracion = () => {
           <TabsTrigger value="familias"><PackageOpen className="w-4 h-4 mr-2"/> Familias</TabsTrigger>
           <TabsTrigger value="permisos"><Shield className="w-4 h-4 mr-2"/> Permisos</TabsTrigger>
         </TabsList>
+        
+        {/* --- Contenido Pestaña Empresas (NUEVO) --- */}
+        {isAdmin && (
+            <TabsContent value="empresas">
+                <EmpresasTab />
+            </TabsContent>
+        )}
 
         {/* --- Contenido Pestaña Clínica (MODIFICADO para integrar Tema) --- */}
         <TabsContent value="clinica">
@@ -759,7 +786,7 @@ const Configuracion = () => {
                           </Badge>
                         </TableCell>
                         <TableCell className='text-xs'>
-                          {log.successful_rows || 0}/{log.total_rows || 0}
+                          {log.successful_rows || 0}/{log.totalProcessed || 0}
                           {(log.failed_rows || 0) > 0 && <span className="text-destructive"> ({(log.failed_rows || 0)} err.)</span>}
                         </TableCell>
                         <TableCell className="text-right">
@@ -801,7 +828,7 @@ const Configuracion = () => {
                 <X className="w-4 h-4"/>
             </Button>
             <div className="text-sm text-muted-foreground">
-                 Clientes procesados: <span className="font-semibold">{selectedLogDetail?.total_rows || 0}</span>. 
+                 Clientes procesados: <span className="font-semibold">{selectedLogDetail?.totalProcessed || 0}</span>. 
                  Fallos: <span className={(selectedLogDetail?.failed_rows || 0) > 0 ? 'text-destructive font-semibold' : 'font-semibold'}>{selectedLogDetail?.failed_rows || 0}</span>.
             </div>
           </SheetHeader>

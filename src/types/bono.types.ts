@@ -19,6 +19,9 @@ export interface ComposicionBono {
  * Registra la compra y el consumo de bonos
  */
 export interface BonoCliente extends LipooutDocument {
+  // --- AÑADIDO PARA MULTIEMPRESA ---
+  empresa_id: string; // <--- AÑADIDO: Causa raíz de los errores 2339 y 2353
+  
   cliente_id: string;
   bono_articulo_id: string;
   bono_nombre: string;

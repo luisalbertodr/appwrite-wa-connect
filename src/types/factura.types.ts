@@ -24,6 +24,9 @@ export interface LineaFactura {
 }
 
 export interface Factura extends LipooutDocument {
+  // --- AÑADIDO PARA MULTIEMPRESA ---
+  empresa_id: string; // <--- AÑADIDO
+  
   numeroFactura: string; // Ej: "FRA2025-0001", "PRE2025-0010"
   fechaEmision: string; // ISO 8601 string (YYYY-MM-DD)
   fechaVencimiento?: string; // ISO 8601 string (YYYY-MM-DD)
@@ -54,6 +57,8 @@ export interface Factura extends LipooutDocument {
 
 // Tipo para la creación/actualización (sin campos calculados ni anidados, líneas como string)
 export interface FacturaInputData {
+    empresa_id?: string; // Se añade como opcional en la entrada
+    
     numeroFactura: string;
     fechaEmision: string; // ISO 8601 string (YYYY-MM-DD)
     fechaVencimiento?: string; // ISO 8601 string (YYYY-MM-DD)

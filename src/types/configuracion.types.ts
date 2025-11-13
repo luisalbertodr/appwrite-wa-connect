@@ -8,6 +8,10 @@ export interface HorarioApertura {
 }
 
 export interface Configuracion {
+  // --- CAMPO MULTIEMPRESA ---
+  empresa_id: string; // ID de la empresa a la que pertenece esta configuración
+  // -------------------------
+
   nombreClinica: string;
   direccion: string;
   cif: string;

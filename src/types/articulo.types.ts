@@ -8,14 +8,17 @@ export interface Articulo extends LipooutDocument {
   descripcion?: string;
   precio: number;
   tipo: TipoArticulo;
-
+  
+  // --- AÑADIDO PARA MULTIEMPRESA ---
+  empresa_id: string; // Campo Multiempresa
+  
   // Appwrite devuelve tanto el ID como el objeto poblado
   familia_id: string; // ID original almacenado en Appwrite
-  familia: any; // Familia completa poblada manualmente en getArticulos
-
+  familia?: any; // Es opcional (?), ya que no se envía al crear/actualizar
+  
   // (Opcional) Campos para control de stock si 'tipo' es 'producto'
   stock?: number | null;
-  // (Opcional) Campos para 'bono'
+  // (Opcional) Campos para 'bono' (FUNCIONALIDAD BONO)
   sesiones_bono?: number | null;
   composicion_bono?: string | null; // JSON de ComposicionBono[] - define qué servicios/productos incluye el bono
   // (Opcional) Duración en minutos para servicios y bonos
@@ -38,7 +41,7 @@ export interface ArticuloInput {
 
   // (Opcional) Campos para control de stock si 'tipo' es 'producto'
   stock?: number | null;
-  // (Opcional) Campos para 'bono'
+  // (Opcional) Campos para 'bono' (FUNCIONALIDAD BONO)
   sesiones_bono?: number | null;
   composicion_bono?: string | null; // JSON de ComposicionBono[] - define qué servicios/productos incluye el bono
   // (Opcional) Duración en minutos para servicios y bonos
@@ -49,8 +52,11 @@ export interface ArticuloInput {
   activo: boolean;
 }
 
+
+// --- INICIO DE CORRECCIONES PARA EXPORTACIÓN (Error 2305) ---
+
 // Tipo para artículos programados dentro de una cita con su horario específico
-export interface ArticuloEnCita {
+export interface ArticuloEnCita { // <--- AÑADIDO EXPORT
   articulo_id: string;
   articulo_nombre: string;
   tipo: TipoArticulo; // Tipo de artículo (producto, servicio, bono)
@@ -70,7 +76,7 @@ export interface ArticuloEnCita {
 }
 
 // Tipo para tiempos no billables (descansos, reuniones, etc.)
-export interface TiempoNoBillable {
+export interface TiempoNoBillable { // <--- AÑADIDO EXPORT
   tipo: 'tiempo_no_billable';
   nombre: string; // Texto personalizable por el usuario
   duracion: number; // Duración en minutos
@@ -80,13 +86,13 @@ export interface TiempoNoBillable {
 }
 
 // Tipo unión para items en una cita (puede ser tratamiento o tiempo no billable)
-export type ItemCita = ArticuloEnCita | TiempoNoBillable;
+export type ItemCita = ArticuloEnCita | TiempoNoBillable; // <--- AÑADIDO EXPORT
 
 // Type guard para distinguir entre tratamientos y tiempos no billables
-export function esTiempoNoBillable(item: ItemCita): item is TiempoNoBillable {
+export function esTiempoNoBillable(item: ItemCita): item is TiempoNoBillable { // <--- AÑADIDO EXPORT
   return 'tipo' in item && item.tipo === 'tiempo_no_billable';
 }
 
-export function esArticuloEnCita(item: ItemCita): item is ArticuloEnCita {
+export function esArticuloEnCita(item: ItemCita): item is ArticuloEnCita { // <--- AÑADIDO EXPORT
   return 'articulo_id' in item;
 }

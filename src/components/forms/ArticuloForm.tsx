@@ -1,7 +1,6 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { ArticuloFormData, articuloSchema } from '@/lib/validators';
-// Se asume que ComposicionBono se exporta desde el archivo de tipos principal
 import { Articulo, ArticuloInput, Familia, LipooutUserInput, ComposicionBono } from '@/types';
 import { Models } from 'appwrite';
 import { Button } from '@/components/ui/button';
@@ -11,13 +10,12 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from '@/components/ui/form';
 import { ScrollArea } from '@/components/ui/scroll-area';
-// Modificaciones: se añaden imports para la lógica del bono
-import { useState, useEffect, useMemo } from 'react';
 import { useGetFamilias, useGetArticulos } from '@/hooks/useArticulos'; // Se añade useGetArticulos
+import { useState, useEffect, useMemo } from 'react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
-import { X, Trash2, PackageSearch } from 'lucide-react'; 
-import LoadingSpinner from '../LoadingSpinner'; // Asumo que este componente existe
+import { Trash2, PackageSearch } from 'lucide-react';
+import LoadingSpinner from '@/components/LoadingSpinner';
 
 
 interface ArticuloFormProps {
@@ -409,10 +407,16 @@ export const ArticuloForm = ({ articuloInicial, onSubmit, isSubmitting }: Articu
             <FormField
                 control={form.control}
                 name="activo"
-                render={({ field }) => (
+                render={({ field }) => ( 
                   <FormItem className="flex flex-row items-center space-x-3 space-y-0 rounded-md border p-4 md:col-span-2">
                     <FormControl>
-                      <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                      <Checkbox 
+                         checked={field.value} 
+                         onCheckedChange={field.onChange} 
+                         name={field.name}
+                         onBlur={field.onBlur}
+                         ref={field.ref}
+                      /> 
                     </FormControl>
                     <div className="space-y-1 leading-none">
                       <FormLabel>Artículo Activo</FormLabel>

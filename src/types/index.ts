@@ -1,4 +1,3 @@
-
 import { Models } from 'appwrite';
 
 // ============================================
@@ -132,3 +131,12 @@ export * from './sesion-clinica.types';
 export * from './notificacion.types';
 export * from './permiso.types';
 export * from './plantilla-documento.types';
+export * from './empresa.types'; 
+
+// Exportaciones explícitas de tipos de artículo (ArticuloEnCita y TiempoNoBillable están en articulo.types.ts)
+export type { ArticuloEnCita, TiempoNoBillable, ItemCita } from './articulo.types';
+// Exportamos EmpleadoInput para que EmpleadoForm lo pueda usar sin errores.
+export type { EmpleadoInput } from './empleado.types';
+
+// Exportaciones explícitas de tipos de factura (Resuelve error 2724/6133)
+export type { FacturaInputData, CreateFacturaInput, UpdateFacturaInput } from './factura.types';

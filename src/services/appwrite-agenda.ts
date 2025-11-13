@@ -4,22 +4,28 @@ import { ID, Query, Models } from 'appwrite';
 import { startOfDay, formatISO, addDays, startOfWeek } from 'date-fns';
 import { updateCliente } from './appwrite-clientes';
 
+// =========================================================================
+// CAMBIO MULTIEMPRESA: OBTENER CONTEXTO DE EMPRESA
+// NOTA: Esta función DEBE ser implementada en el frontend (ej. useEmpresaContext)
+// y provista a los servicios. Aquí usamos un placeholder.
+// =========================================================================
+const getEmpresaActualId = () => "ID_EMPRESA_ACTUAL_PLACEHOLDER"; 
+
 // Tipos Create/Update Input (Asegúrate que coincidan con tu definición)
-// export type CreateCitaInput = LipooutUserInput<CitaInput>; // Si usas LipooutUserInput
-// export type UpdateCitaInput = Partial<CreateCitaInput>; // Si usas LipooutUserInput
-// O si no usas LipooutUserInput globalmente:
 export type CreateCitaInput = CitaInput;
 export type UpdateCitaInput = Partial<CitaInput>;
 
 
 // Búsqueda de citas por datos del cliente (iterativa acumulativa)
 export const buscarCitas = async (searchQuery: string): Promise<(Cita & Models.Document)[]> => {
+  const empresaId = getEmpresaActualId(); // OBTENER EMPRESA ID
+
   if (!searchQuery || searchQuery.trim() === "") {
     // Sin búsqueda, devolver citas recientes
     const response = await databases.listDocuments<Cita & Models.Document>(
       DATABASE_ID,
       CITAS_COLLECTION_ID,
-      [Query.limit(100), Query.orderDesc('fecha_hora')]
+      [Query.equal('empresa_id', empresaId), Query.limit(100), Query.orderDesc('fecha_hora')] // FILTRO
     );
     return response.documents;
   }
@@ -33,7 +39,11 @@ export const buscarCitas = async (searchQuery: string): Promise<(Cita & Models.D
       const response = await databases.listDocuments<Cliente & Models.Document>(
         DATABASE_ID,
         CLIENTES_COLLECTION_ID,
-        [Query.search(field, searchQuery), Query.limit(100)]
+        [
+          Query.equal('empresa_id', empresaId), // FILTRO
+          Query.search(field, searchQuery), 
+          Query.limit(100)
+        ]
       );
       
       response.documents.forEach(doc => {
@@ -64,7 +74,11 @@ export const buscarCitas = async (searchQuery: string): Promise<(Cita & Models.D
       const response = await databases.listDocuments<Cita & Models.Document>(
         DATABASE_ID,
         CITAS_COLLECTION_ID,
-        [Query.equal('cliente_id', batch), Query.limit(100), Query.orderDesc('fecha_hora')]
+        [
+          Query.equal('empresa_id', empresaId), // FILTRO
+          Query.equal('cliente_id', batch), 
+          Query.limit(100), Query.orderDesc('fecha_hora')
+        ]
       );
       
       response.documents.forEach(doc => {
@@ -81,18 +95,14 @@ export const buscarCitas = async (searchQuery: string): Promise<(Cita & Models.D
 };
 
 export const getCitasPorDia = async (fecha: Date): Promise<(Cita & Models.Document)[]> => {
+  const empresaId = getEmpresaActualId(); // OBTENER EMPRESA ID
+    
   const startOfDayDate = startOfDay(fecha);
-  // CORRECCIÓN: Usar el inicio del DÍA SIGUIENTE en lugar de endOfDay
-  // Esto evita problemas con el cambio de hora (DST)
-  // const endOfDayDate = endOfDay(fecha); // Antiguo
-  const startOfNextDayDate = startOfDay(addDays(fecha, 1)); // Nuevo
+  const startOfNextDayDate = startOfDay(addDays(fecha, 1)); 
 
-  // Convertir a ISO string para Appwrite
   const startOfDayISO = formatISO(startOfDayDate);
-  // const endOfDayISO = formatISO(endOfDayDate); // Antiguo
-  const startOfNextDayISO = formatISO(startOfNextDayDate); // Nuevo
+  const startOfNextDayISO = formatISO(startOfNextDayDate); 
 
-  // --- LOG 1 (Actualizado) ---
   console.log(`%c[Service: getCitasPorDia] Buscando citas entre ${startOfDayISO} (inclusive) y ${startOfNextDayISO} (exclusive)`, 'color: blue; font-weight: bold;');
 
   try {
@@ -100,56 +110,35 @@ export const getCitasPorDia = async (fecha: Date): Promise<(Cita & Models.Docume
       DATABASE_ID,
       CITAS_COLLECTION_ID,
       [
+        Query.equal('empresa_id', empresaId), // FILTRO
         Query.greaterThanEqual('fecha_hora', startOfDayISO),
-        // CORRECCIÓN: Usar 'lessThan' con el inicio del día siguiente
-        // Query.lessThan('fecha_hora', endOfDayISO), // Antiguo
-        Query.lessThan('fecha_hora', startOfNextDayISO), // Nuevo
-        Query.limit(100), // Límite razonable
-        Query.orderAsc('fecha_hora') // Ordenar por hora
+        Query.lessThan('fecha_hora', startOfNextDayISO), 
+        Query.limit(100), 
+        Query.orderAsc('fecha_hora') 
       ]
     );
 
-    // --- LOG 2 ---
     console.log('[Service: getCitasPorDia] Documentos recibidos de Appwrite:', response.documents);
-    // --- LOG 2.1 (Opcional pero útil): Ver total y comparar con documentos ---
     console.log(`[Service: getCitasPorDia] Total reportado por Appwrite: ${response.total}`);
-    // --- LOG 2.2 (Opcional): Si no devuelve nada, loguear los parámetros ---
-    if (response.documents.length === 0) {
-        console.warn(`[Service: getCitasPorDia] Appwrite devolvió 0 documentos. Parámetros de consulta:`, {
-            DATABASE_ID,
-            CITAS_COLLECTION_ID,
-            queries: [
-                `greaterThanEqual('fecha_hora', ${startOfDayISO})`,
-                // `lessThan('fecha_hora', ${endOfDayISO})`, // Antiguo
-                `lessThan('fecha_hora', ${startOfNextDayISO})`, // Nuevo
-                `limit(100)`,
-                `orderAsc('fecha_hora')`
-            ]
-        });
-    }
-
-
+    
     return response.documents;
   } catch (error) {
     console.error("%c[Service: getCitasPorDia] ERROR fetching citas:", 'color: red; font-weight: bold;', error);
-    // Ver el tipo de error puede ayudar
     if (error instanceof Error) {
         console.error("Error message:", error.message);
-        // Si tienes una estructura específica de error de Appwrite, puedes loguearla
-        // console.error("Appwrite error details:", JSON.stringify(error, null, 2));
     }
-    return []; // Devolver vacío en caso de error
+    return []; 
   }
 };
 
 // Obtener citas de toda la semana (Lunes a Sábado)
 export const getCitasPorSemana = async (fecha: Date): Promise<(Cita & Models.Document)[]> => {
+  const empresaId = getEmpresaActualId(); // OBTENER EMPRESA ID
+    
   // Obtener inicio de semana (Lunes)
   const inicioSemana = startOfWeek(fecha, { weekStartsOn: 1 });
-  // Obtener fin de semana (Sábado) - añadimos 6 días desde el lunes
-  const finSemana = addDays(inicioSemana, 6);
   // Obtener el inicio del día siguiente (Domingo) para la comparación lessThan
-  const inicioDomingo = startOfDay(addDays(finSemana, 1));
+  const inicioDomingo = startOfDay(addDays(inicioSemana, 7));
 
   const inicioSemanaISO = formatISO(inicioSemana);
   const inicioDomingoISO = formatISO(inicioDomingo);
@@ -161,9 +150,10 @@ export const getCitasPorSemana = async (fecha: Date): Promise<(Cita & Models.Doc
       DATABASE_ID,
       CITAS_COLLECTION_ID,
       [
+        Query.equal('empresa_id', empresaId), // FILTRO
         Query.greaterThanEqual('fecha_hora', inicioSemanaISO),
         Query.lessThan('fecha_hora', inicioDomingoISO),
-        Query.limit(500), // Límite mayor para semana completa
+        Query.limit(500), 
         Query.orderAsc('fecha_hora')
       ]
     );
@@ -181,10 +171,10 @@ export const getCitasPorSemana = async (fecha: Date): Promise<(Cita & Models.Doc
 };
 
 // Helper para limpiar campos undefined y strings vacíos
-// IMPORTANTE: cliente_id y empleado_id son campos obligatorios, no se deben eliminar
 const cleanUndefinedFields = <T extends Record<string, any>>(obj: T): Partial<T> => {
   const cleaned: any = {};
-  const camposObligatorios = ['cliente_id', 'empleado_id'];
+  // empresa_id, cliente_id y empleado_id son campos obligatorios
+  const camposObligatorios = ['cliente_id', 'empleado_id', 'empresa_id']; 
   
   for (const key in obj) {
     if (Object.prototype.hasOwnProperty.call(obj, key)) {
@@ -205,38 +195,29 @@ const cleanUndefinedFields = <T extends Record<string, any>>(obj: T): Partial<T>
 
 // --- createCita (con Logs detallados) ---
 export const createCita = async (cita: LipooutUserInput<CitaInput>): Promise<Cita & Models.Document> => {
-    // 🆕 VALIDAR que cliente_nombre esté presente
+    const empresaId = getEmpresaActualId(); // OBTENER EMPRESA ID
+    
+    // VALIDAR que cliente_nombre esté presente
     if (!cita.cliente_nombre || cita.cliente_nombre.trim() === '') {
       console.error('❌ Error: cliente_nombre no puede estar vacío');
       throw new Error('El nombre del cliente es obligatorio');
     }
     
-    // Limpiar campos undefined antes de enviar
-    const citaLimpia = cleanUndefinedFields(cita);
+    // Añadir empresa_id al objeto Cita antes de limpiar/guardar
+    const citaConEmpresa = { ...cita, empresa_id: empresaId };
+    const citaLimpia = cleanUndefinedFields(citaConEmpresa);
     
-    // --- LOG 3 ---
+    // --- LOGS ---
     console.log('%c=== CREAR CITA - Datos enviados ===', 'color: green; font-weight: bold;');
-    console.log('DATABASE_ID:', DATABASE_ID);
-    console.log('CITAS_COLLECTION_ID:', CITAS_COLLECTION_ID);
-    console.log('cliente_nombre:', cita.cliente_nombre); // 🆕 LOG
-    console.log('Datos originales:', cita);
     console.log('Datos limpiados:', citaLimpia);
-    // Loguear tipos para asegurar formato correcto
-    console.log('Tipo de cada campo:');
-    for (const key in citaLimpia) {
-        if (Object.prototype.hasOwnProperty.call(citaLimpia, key)) {
-            const value = citaLimpia[key as keyof typeof citaLimpia];
-            console.log(`   ${key}: ${typeof value} = ${JSON.stringify(value)}`);
-        }
-    }
-    // --- FIN LOG 3 ---
+    // --- FIN LOGS ---
 
   try {
     const response = await databases.createDocument<Cita & Models.Document>(
       DATABASE_ID,
       CITAS_COLLECTION_ID,
       ID.unique(),
-      citaLimpia as any // Cast para evitar error TypeScript - cleanUndefinedFields ya elimina undefined en runtime
+      citaLimpia as any 
     );
     // --- LOG 4 ---
     console.log(`%c✓ Cita creada exitosamente: ${response.$id}`, 'color: green;', response);
@@ -244,39 +225,32 @@ export const createCita = async (cita: LipooutUserInput<CitaInput>): Promise<Cit
     return response;
   } catch (error) {
      console.error("%c✗ Error al crear cita:", 'color: red; font-weight: bold;', error);
-     // Loguear detalles del error
-     if (error instanceof Error) {
-        console.error("Error message:", error.message);
-        // Si es un error específico de Appwrite con response
-        const appwriteError = error as any;
-        if (appwriteError.response) {
-            console.error("Appwrite Response:", appwriteError.response);
-        }
-     }
      throw error; // Relanzar para que react-query lo maneje
   }
 };
 
 // --- updateCita ---
 export const updateCita = async (id: string, data: Partial<LipooutUserInput<CitaInput>>): Promise<Cita & Models.Document> => {
-    // 🆕 Si se actualiza cliente_id, validar que también venga cliente_nombre
+    const empresaId = getEmpresaActualId(); // OBTENER EMPRESA ID
+    
+    // Si se actualiza cliente_id, validar que también venga cliente_nombre
     if (data.cliente_id && (!data.cliente_nombre || data.cliente_nombre.trim() === '')) {
       console.error('❌ Error: si se actualiza cliente_id, también debe incluirse cliente_nombre');
       throw new Error('El nombre del cliente es obligatorio al cambiar de cliente');
     }
     
-    // Limpiar campos undefined antes de enviar
-    const dataLimpia = cleanUndefinedFields(data);
+    // Asegurar empresa_id en los datos de actualización
+    const dataConEmpresa = { ...data, empresa_id: empresaId };
+    const dataLimpia = cleanUndefinedFields(dataConEmpresa);
     
     console.log(`%c=== ACTUALIZAR CITA ${id} ===`, 'color: orange; font-weight: bold;');
-    console.log('Datos originales:', data);
     console.log('Datos limpiados:', dataLimpia);
      try {
         const response = await databases.updateDocument<Cita & Models.Document>(
             DATABASE_ID,
             CITAS_COLLECTION_ID,
             id,
-            dataLimpia as any // Cast para evitar error TypeScript - cleanUndefinedFields ya elimina undefined en runtime
+            dataLimpia as any
         );
         console.log(`%c✓ Cita ${id} actualizada exitosamente`, 'color: orange;', response);
         return response;
@@ -286,8 +260,12 @@ export const updateCita = async (id: string, data: Partial<LipooutUserInput<Cita
      }
 };
 
-// --- deleteCita ---
+// --- deleteCita (Preservando Historial) ---
 export const deleteCita = async (id: string): Promise<void> => {
+    // La obtención del ID de la empresa no es necesaria aquí, ya que se asume que 
+    // el usuario está logueado en una empresa y tiene permisos para eliminar la cita.
+    // Además, updateCliente y getDocument internos ya deben usar los filtros de Appwrite.
+    
     console.log(`%c=== ELIMINAR CITA ${id} ===`, 'color: red; font-weight: bold;');
     try {
         // 1. Obtener el documento completo de la cita antes de eliminarla
@@ -311,8 +289,6 @@ export const deleteCita = async (id: string): Promise<void> => {
                     cita.cliente_id
                 );
                 
-                console.log('Cliente obtenido:', cliente);
-                
                 // 4. Crear entrada de historial
                 const entradaHistorial: HistorialCita = {
                     cita_id: cita.$id,
@@ -326,8 +302,6 @@ export const deleteCita = async (id: string): Promise<void> => {
                     motivo_eliminacion: 'Eliminada manualmente desde la agenda'
                 };
                 
-                console.log('Entrada de historial creada:', entradaHistorial);
-                
                 // 5. Deserializar historial del cliente con fallback
                 let historialActual: HistorialCita[] = [];
                 try {
@@ -339,7 +313,7 @@ export const deleteCita = async (id: string): Promise<void> => {
                 }
                 const nuevoHistorial = [...historialActual, entradaHistorial];
                 
-                // 6. Actualizar el cliente con el nuevo historial (serializar a JSON string)
+                // 6. Actualizar el cliente con el nuevo historial (updateCliente inyectará empresa_id)
                 await updateCliente({
                     $id: cliente.$id,
                     data: {
@@ -349,7 +323,6 @@ export const deleteCita = async (id: string): Promise<void> => {
                 
                 console.log(`%c✓ Historial del cliente ${cliente.$id} actualizado`, 'color: green;');
             } catch (clienteError) {
-                // Si hay error al actualizar el historial, loguear pero continuar con la eliminación
                 console.error('Error al actualizar historial del cliente:', clienteError);
                 console.warn('Se procederá a eliminar la cita sin actualizar el historial');
             }
@@ -376,12 +349,15 @@ export const getCitasPorRango = async (
   fechaFin: Date,
   empleadoId?: string
 ): Promise<(Cita & Models.Document)[]> => {
+  const empresaId = getEmpresaActualId(); // OBTENER EMPRESA ID
+
   const inicioISO = formatISO(fechaInicio);
   const finISO = formatISO(fechaFin);
 
   console.log(`%c[Service: getCitasPorRango] Buscando citas entre ${inicioISO} y ${finISO}${empleadoId ? ` para empleado ${empleadoId}` : ''}`, 'color: blue; font-weight: bold;');
 
   const queries = [
+    Query.equal('empresa_id', empresaId), // FILTRO
     Query.greaterThanEqual('fecha_hora', inicioISO),
     Query.lessThan('fecha_hora', finISO),
     Query.limit(500),

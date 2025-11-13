@@ -2,37 +2,64 @@ import { databases, DATABASE_ID, ARTICULOS_COLLECTION_ID, FAMILIAS_COLLECTION_ID
 import { Articulo, ArticuloInput, Familia, LipooutUserInput } from '@/types'; // Import LipooutUserInput
 import { ID, Query, Models } from 'appwrite';
 
+// =========================================================================
+// CAMBIO MULTIEMPRESA: OBTENER CONTEXTO DE EMPRESA (Placeholder)
+// =========================================================================
+// NOTA: Reemplazar por la obtención real del ID de la empresa de la sesión.
+const getEmpresaActualId = () => "ID_EMPRESA_ACTUAL_PLACEHOLDER"; 
+
 // --- API de Familias ---
 
 // (NUEVO) Tipo Input para Familia
-export type FamiliaInput = LipooutUserInput<Familia>;
+export type FamiliaInput = LipooutUserInput<Familia>; 
+// Define el tipo de objeto que se enviará a Appwrite (Input + empresa_id)
+type FamiliaPayload = FamiliaInput & { empresa_id: string };
+
 
 export const getFamilias = async (): Promise<(Familia & Models.Document)[]> => {
+  const empresaId = getEmpresaActualId(); // OBTENER EMPRESA ID
+    
   const response = await databases.listDocuments<Familia & Models.Document>(
     DATABASE_ID,
     FAMILIAS_COLLECTION_ID,
-    [Query.limit(100)]
+    [Query.equal('empresa_id', empresaId), Query.limit(100)] // FILTRO MULTIEMPRESA
   );
   return response.documents;
 };
 
 // (NUEVO)
 export const createFamilia = (familiaInput: FamiliaInput) => {
+    const empresaId = getEmpresaActualId(); // OBTENER EMPRESA ID
+    
+    // El payload incluye la empresa_id
+    const familiaPayload: FamiliaPayload = {
+        ...familiaInput,
+        empresa_id: empresaId 
+    };
+    
     return databases.createDocument<Familia & Models.Document>(
         DATABASE_ID,
         FAMILIAS_COLLECTION_ID,
         ID.unique(),
-        familiaInput
+        familiaPayload 
     );
 };
 
 // (NUEVO)
 export const updateFamilia = (id: string, familiaInput: Partial<FamiliaInput>) => {
+    const empresaId = getEmpresaActualId(); // OBTENER EMPRESA ID
+    
+    // El payload incluye la empresa_id
+    const familiaPayload: Partial<FamiliaPayload> = {
+        ...familiaInput,
+        empresa_id: empresaId 
+    };
+    
     return databases.updateDocument<Familia & Models.Document>(
         DATABASE_ID,
         FAMILIAS_COLLECTION_ID,
         id,
-        familiaInput
+        familiaPayload 
     );
 };
 
@@ -43,8 +70,6 @@ export const deleteFamilia = (id: string) => {
         FAMILIAS_COLLECTION_ID,
         id
     );
-    // TODO: Considerar qué pasa con los artículos que tienen esta familia_id
-    // Se podría necesitar una función de Appwrite para actualizar artículos
 };
 
 
@@ -54,16 +79,17 @@ export const deleteFamilia = (id: string) => {
 export type CreateArticuloInput = ArticuloInput;
 // Update es Partial del Create type
 export type UpdateArticuloInput = Partial<CreateArticuloInput>;
+// Define el tipo de objeto que se enviará a Appwrite (Input + empresa_id)
+type ArticuloPayload = CreateArticuloInput & { empresa_id: string };
+
 
 export const getArticulos = async (familiaId?: string): Promise<(Articulo & Models.Document)[]> => {
-  const queries = [Query.limit(100)];
+  const empresaId = getEmpresaActualId(); // OBTENER EMPRESA ID
+
+  const queries = [Query.equal('empresa_id', empresaId), Query.limit(100)]; // FILTRO MULTIEMPRESA
   if (familiaId) {
     queries.push(Query.equal('familia_id', familiaId));
   }
-  // TODO: Appwrite por defecto no expande relaciones (como 'familia')
-  // Para que 'familia.nombre' funcione, necesitaríamos hacer un "join" manual
-  // o Appwrite 1.5+ tendría soporte para relaciones.
-  // Por ahora, 'familia' será solo un ID o faltará.
   
   const response = await databases.listDocuments<Articulo & Models.Document>(
     DATABASE_ID,
@@ -72,8 +98,6 @@ export const getArticulos = async (familiaId?: string): Promise<(Articulo & Mode
   );
 
   // --- Workaround para "poblar" la familia ---
-  // Esto es ineficiente (N+1 query) pero necesario sin Relaciones de Appwrite
-  // Una mejor solución sería cachear familias en el cliente
   const familias = await getFamilias();
   const familiaMap = new Map(familias.map(f => [f.$id, f]));
 
@@ -84,18 +108,18 @@ export const getArticulos = async (familiaId?: string): Promise<(Articulo & Mode
 };
 
 export const createArticulo = (articuloInput: CreateArticuloInput) => {
-   const articuloToSave: any = {
+   const empresaId = getEmpresaActualId(); // OBTENER EMPRESA ID
+   
+   // Esto ahora es correcto porque Articulo ya no requiere 'familia'
+   const articuloPayload: ArticuloPayload = {
      ...articuloInput,
+     empresa_id: empresaId, // INYECTAR EMPRESA ID
    };
-   
-   if (articuloToSave.precio === undefined || !articuloToSave.tipo || !articuloToSave.familia_id) {
-       throw new Error("Faltan campos requeridos para crear el artículo (nombre, precio, tipo, familia_id).");
-   }
-   
-   // Limpiar campos undefined para evitar errores en Appwrite
-   Object.keys(articuloToSave).forEach(key => {
-     if (articuloToSave[key] === undefined) {
-       delete articuloToSave[key];
+
+   // Limpiar campos undefined antes de enviar
+   Object.keys(articuloPayload).forEach(key => {
+     if (articuloPayload[key as keyof ArticuloPayload] === undefined) {
+       delete articuloPayload[key as keyof ArticuloPayload];
      }
    });
 
@@ -103,29 +127,31 @@ export const createArticulo = (articuloInput: CreateArticuloInput) => {
     DATABASE_ID,
     ARTICULOS_COLLECTION_ID,
     ID.unique(),
-    articuloToSave
+    articuloPayload 
   ) as Promise<Articulo & Models.Document>;
 };
 
 export const updateArticulo = (id: string, articuloInput: UpdateArticuloInput) => {
-   console.log('🔍 updateArticulo - Input recibido:', articuloInput);
-   const articuloToUpdate: any = { ...articuloInput };
-   
+   const empresaId = getEmpresaActualId(); // OBTENER EMPRESA ID
+
+   // El payload incluye la empresa_id
+   const articuloPayload: Partial<ArticuloPayload> = {
+        ...articuloInput,
+        empresa_id: empresaId // INYECTAR EMPRESA ID
+    };
+
    // Limpiar campos undefined para evitar errores en Appwrite
-   Object.keys(articuloToUpdate).forEach(key => {
-     if (articuloToUpdate[key] === undefined) {
-       delete articuloToUpdate[key];
+   Object.keys(articuloPayload).forEach(key => {
+     if (articuloPayload[key as keyof ArticuloPayload] === undefined) {
+       delete articuloPayload[key as keyof ArticuloPayload];
      }
    });
-   
-   console.log('📤 updateArticulo - Datos a enviar a Appwrite:', articuloToUpdate);
-   console.log('📋 updateArticulo - ID del documento:', id);
    
   return databases.updateDocument(
     DATABASE_ID,
     ARTICULOS_COLLECTION_ID,
     id,
-    articuloToUpdate
+    articuloPayload 
   ) as Promise<Articulo & Models.Document>;
 };
 

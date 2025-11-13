@@ -3,6 +3,9 @@ import { Cliente, LipooutUserInput, HistorialCita } from '@/types';
 import { ID, Query, Models } from 'appwrite';
 import { generateSearchUnified, filterByAllWords } from '@/utils/search-helpers';
 
+// IMPORTANTE: Asumimos que se inyecta la empresa actual.
+const getEmpresaActualId = () => "ID_EMPRESA_ACTUAL_PLACEHOLDER"; 
+
 // --- Funciones de Serialización para historial_citas ---
 
 /**
@@ -36,12 +39,14 @@ export type UpdateClienteInput = Partial<CreateClienteInput>;
 
 // OBTENER Clientes (con búsqueda usando índice fulltext en campo unificado)
 export const getClientesByNombre = async (searchQuery: string = ""): Promise<(Cliente & Models.Document)[]> => {
+    const empresaId = getEmpresaActualId(); // <--- OBTENER EMPRESA ID
+
     // Si no hay búsqueda, devolver los primeros 500
     if (!searchQuery || searchQuery.trim() === "") {
         const response = await databases.listDocuments<Cliente & Models.Document>(
             DATABASE_ID,
             CLIENTES_COLLECTION_ID,
-            [Query.limit(500), Query.orderDesc('$createdAt')]
+            [Query.equal('empresa_id', empresaId), Query.limit(500), Query.orderDesc('$createdAt')] // <--- FILTRO
         );
         return response.documents.map(processClienteDocument);
     }
@@ -54,6 +59,7 @@ export const getClientesByNombre = async (searchQuery: string = ""): Promise<(Cl
             DATABASE_ID,
             CLIENTES_COLLECTION_ID,
             [
+                Query.equal('empresa_id', empresaId), // <--- FILTRO
                 Query.search('search_unified', searchQuery),
                 Query.limit(500),
                 Query.orderDesc('$createdAt')
@@ -75,8 +81,11 @@ export const getClientesByNombre = async (searchQuery: string = ""): Promise<(Cl
 
 // CREAR Cliente
 export const createCliente = (newCliente: CreateClienteInput) => {
+  const empresaId = getEmpresaActualId(); // <--- OBTENER EMPRESA ID
+  
   const clienteWithSearch = {
     ...newCliente,
+    empresa_id: empresaId, // <--- INYECTAR EMPRESA ID
     search_unified: generateSearchUnified(newCliente)
   };
   
@@ -90,9 +99,12 @@ export const createCliente = (newCliente: CreateClienteInput) => {
 
 // ACTUALIZAR Cliente
 export const updateCliente = async ({ $id, data }: { $id: string, data: UpdateClienteInput }) => {
-  // Regenerar search_unified al actualizar
+  const empresaId = getEmpresaActualId(); // <--- OBTENER EMPRESA ID
+
+  // Regenerar search_unified y asegurar empresa_id en los datos (Appwrite lo ignora en update si no se cambia, pero es buena práctica)
   const dataWithSearch = {
     ...data,
+    empresa_id: empresaId, // <--- INYECTAR EMPRESA ID
     search_unified: generateSearchUnified(data)
   };
   
@@ -108,6 +120,9 @@ export const updateCliente = async ({ $id, data }: { $id: string, data: UpdateCl
 
 // ELIMINAR Cliente
 export const deleteCliente = (clienteId: string) => {
+  // NOTA: Se debe confiar en las reglas de Appwrite para la eliminación, 
+  // pero la lógica de la aplicación debe asegurar que el usuario tenga permisos
+  // para la empresa de este cliente.
   return databases.deleteDocument(
     DATABASE_ID,
     CLIENTES_COLLECTION_ID,
