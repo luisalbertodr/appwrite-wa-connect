@@ -241,12 +241,35 @@ module.exports = async ({ req, res, log, error }) => {
                 // CÁLCULO Y ASIGNACIÓN DE search_unified INLINE
                 clientToSave.search_unified = generateSearchUnified(clientToSave);
                 
-                // MULTIEMPRESA: Inyectar empresa_id desde variable de entorno
-                const empresaId = process.env.APPWRITE_EMPRESA_ID || 'ID_EMPRESA_ACTUAL_PLACEHOLDER';
+                // MULTIEMPRESA: Determinar empresa_id (payload > env)
+                let empresaId = process.env.APPWRITE_EMPRESA_ID;
+                try {
+                    const raw = req.body || req.payload;
+                    if (raw) {
+                        const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+                        if (parsed && parsed.empresa_id) empresaId = parsed.empresa_id;
+                    }
+                } catch (e) {
+                    // Ignorar errores de parseo
+                }
+                if (!empresaId) {
+                    const msg = 'empresa_id no configurado (env APPWRITE_EMPRESA_ID o payload.empresa_id).';
+                    error(msg);
+                    addIssue(importErrors, `Error de configuración: ${msg}`, rowNumber, newClientRecord.codcli);
+                    detailedImportResults.push({ codcli: newClientRecord.codcli, nombre: nombreCompleto, status: 'ERROR', message: msg });
+                    continue;
+                }
                 clientToSave.empresa_id = empresaId;
                 
                 let clientId;
-                const existing = await databases.listDocuments(DATABASE_ID, CLIENTS_COLLECTION_ID, [Query.equal('codcli', newClientRecord.codcli)]);
+                const existing = await databases.listDocuments(
+                    DATABASE_ID,
+                    CLIENTS_COLLECTION_ID,
+                    [
+                        Query.equal('codcli', newClientRecord.codcli),
+                        Query.equal('empresa_id', empresaId)
+                    ]
+                );
 
                 if (existing.documents.length > 0) {
                     await databases.updateDocument(DATABASE_ID, CLIENTS_COLLECTION_ID, existing.documents[0].$id, clientToSave);

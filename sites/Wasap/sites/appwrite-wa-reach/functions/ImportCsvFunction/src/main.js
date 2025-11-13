@@ -209,7 +209,31 @@ module.exports = async ({ req, res, log, error }) => {
                     importErrors: Object.values(warnings),
                 };
                 
-                const existing = await databases.listDocuments(DATABASE_ID, CLIENTS_COLLECTION_ID, [Query.equal('codcli', newClientRecord.codcli)]);
+                // MULTIEMPRESA: Determinar empresa_id (payload > env)
+                let empresaId = process.env.APPWRITE_EMPRESA_ID;
+                try {
+                    const raw = req.body || req.payload;
+                    if (raw) {
+                        const parsed = typeof raw === 'string' ? JSON.parse(raw) : raw;
+                        if (parsed && parsed.empresa_id) empresaId = parsed.empresa_id;
+                    }
+                } catch (_) {}
+                if (!empresaId) {
+                    const msg = 'empresa_id no configurado (env APPWRITE_EMPRESA_ID o payload.empresa_id).';
+                    error(msg);
+                    addIssue(importErrors, `Fila ${rowNumber} (Cod: ${newClientRecord.codcli || 'N/A'}): ${msg}`);
+                    continue;
+                }
+                clientToSave.empresa_id = empresaId;
+                
+                const existing = await databases.listDocuments(
+                    DATABASE_ID,
+                    CLIENTS_COLLECTION_ID,
+                    [
+                        Query.equal('codcli', newClientRecord.codcli),
+                        Query.equal('empresa_id', empresaId)
+                    ]
+                );
 
                 if (existing.documents.length > 0) {
                     await databases.updateDocument(DATABASE_ID, CLIENTS_COLLECTION_ID, existing.documents[0].$id, clientToSave);
