@@ -652,7 +652,7 @@ const Configuracion = () => {
                     {proveedores && proveedores.length > 0 ? proveedores.map(prov => (
                       <TableRow key={prov.$id}>
                         <TableCell className="font-medium">{prov.nombre}</TableCell>
-                        <TableCell>{prov.cif || '-'}</TableCell>
+                        <TableCell>{prov.cif2 || '-'}</TableCell>
                         <TableCell>{prov.telefono || '-'}</TableCell>
                         <TableCell>{prov.email || '-'}</TableCell>
                         <TableCell>

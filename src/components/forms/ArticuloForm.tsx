@@ -277,7 +277,7 @@ export const ArticuloForm = ({ articuloInicial, onSubmit, isSubmitting }: Articu
             {tipoSeleccionado === 'bono' && (
                 <>
                 {/* Campo Nº Sesiones (Total Usos) - Ahora calculado y deshabilitado */}
-                <FormField control={form.control} name="sesiones_bono" render={({ field }) => ( 
+                <FormField control={form.control} name="sesiones_bono" render={() => ( 
                     <FormItem> 
                         <FormLabel>Nº Sesiones (Total Usos)</FormLabel> 
                         <FormControl>

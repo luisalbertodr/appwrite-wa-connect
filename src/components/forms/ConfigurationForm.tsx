@@ -92,6 +92,7 @@ export const ConfigurationForm = ({ configInicial, onSubmit, onLogoUpload, isSub
   const handleSubmit = async (data: ConfigurationFormData) => {
     // Solo enviamos los datos del formulario, los contadores no se tocan aquí
     const finalData: LipooutUserInput<Configuracion> = {
+        empresa_id: configInicial?.empresa_id || '',
         nombreClinica: data.nombreClinica,
         direccion: data.direccion || '',
         cif2: data.cif2,
