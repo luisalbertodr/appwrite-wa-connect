@@ -209,7 +209,7 @@ export const horarioAperturaSchema = z.object({
 export const configurationSchema = z.object({
   nombreClinica: z.string().min(1, "Nombre obligatorio"),
   direccion: z.string().optional(),
-  cif: z.string().min(1, "CIF obligatorio"),
+  cif2: z.string().min(1, "CIF obligatorio"),
   emailContacto: z.string().email("Email inválido").optional().or(z.literal('')),
   telefonoContacto: z.string().optional(),
   serieFactura: z.string().min(1, "Prefijo obligatorio").max(5, "Máx 5 chars"),
@@ -250,7 +250,7 @@ export type AparatoFormData = z.infer<typeof aparatoSchema>;
 // 10. Proveedor
 export const proveedorSchema = z.object({
   nombre: z.string().min(1, "El nombre es obligatorio"),
-  cif: z.string().optional(),
+  cif2: z.string().optional(),
   telefono: z.string().optional(),
   email: z.string().email("Email inválido").optional().or(z.literal('')),
   direccion: z.string().optional(),

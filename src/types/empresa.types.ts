@@ -6,7 +6,7 @@ import { LipooutDocument } from './index';
 export interface Empresa extends LipooutDocument {
   nombre: string;
   nombre_legal: string;
-  cif: string;
+  cif2: string;
   activa: boolean;
   // ID del documento de configuración que le pertenece (1:1)
   configuracion_id: string; 

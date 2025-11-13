@@ -250,7 +250,7 @@ const Configuracion = () => {
           // Incluir empresa_id al guardar
           empresa_id: clinicConfig.empresa_id,
           nombreClinica: String(clinicConfig.nombreClinica || '').trim(),
-          cif: String(clinicConfig.cif || '').trim(),
+          cif2: String(clinicConfig.cif2 || '').trim(),
           serieFactura: String(clinicConfig.serieFactura || '').trim(),
           seriePresupuesto: String(clinicConfig.seriePresupuesto || '').trim(),
           direccion: String(clinicConfig.direccion || '').trim(),

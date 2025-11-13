@@ -31,7 +31,7 @@ export const createEmpresa = (newEmpresa: CreateEmpresaInput) => {
     EMPRESAS_COLLECTION_ID,
     ID.unique(),
     // Inyectamos un valor placeholder para configuracion_id
-    { ...newEmpresa, configuracion_id: 'PENDING_CONFIG_' + ID.unique() } 
+    { ...newEmpresa, configuracion_id: 'TEMP_' + ID.unique() } 
   );
 };
 

@@ -178,7 +178,7 @@ export const FacturaPDF = ({ factura, config }: { factura: FacturaConDatos, conf
           <View style={styles.headerColumn}>
             <Text style={styles.headerLogo}>{config.nombreClinica || 'Lipoout'}</Text>
             <Text style={styles.headerAddress}>{config.direccion || 'Dirección no configurada'}</Text>
-            <Text style={styles.headerAddress}>CIF: {config.cif || 'N/A'}</Text>
+            <Text style={styles.headerAddress}>CIF: {config.cif2 || 'N/A'}</Text>
             <Text style={styles.headerAddress}>{config.emailContacto || ''} - {config.telefonoContacto || ''}</Text>
           </View>
           <View style={styles.headerColumn}>

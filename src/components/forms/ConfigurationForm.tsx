@@ -35,7 +35,7 @@ const horariosDefecto: HorarioApertura[] = [
 const defaultValues: ConfigurationFormData = {
   nombreClinica: '',
   direccion: '',
-  cif: '',
+  cif2: '',
   emailContacto: '',
   telefonoContacto: '',
   serieFactura: 'FRA',
@@ -74,7 +74,7 @@ export const ConfigurationForm = ({ configInicial, onSubmit, onLogoUpload, isSub
       form.reset({
         nombreClinica: configInicial.nombreClinica || '',
         direccion: configInicial.direccion || '',
-        cif: configInicial.cif || '',
+        cif2: configInicial.cif2 || '',
         emailContacto: configInicial.emailContacto || '',
         telefonoContacto: configInicial.telefonoContacto || '',
         serieFactura: configInicial.serieFactura || 'FRA',
@@ -94,7 +94,7 @@ export const ConfigurationForm = ({ configInicial, onSubmit, onLogoUpload, isSub
     const finalData: LipooutUserInput<Configuracion> = {
         nombreClinica: data.nombreClinica,
         direccion: data.direccion || '',
-        cif: data.cif,
+        cif2: data.cif2,
         emailContacto: data.emailContacto || '',
         telefonoContacto: data.telefonoContacto || '',
         serieFactura: data.serieFactura,
@@ -159,7 +159,7 @@ export const ConfigurationForm = ({ configInicial, onSubmit, onLogoUpload, isSub
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 max-w-2xl mx-auto">
          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
              <FormField control={form.control} name="nombreClinica" render={({ field }) => ( <FormItem> <FormLabel>Nombre Clínica *</FormLabel> <FormControl><Input {...field} /></FormControl> <FormMessage /> </FormItem> )}/>
-             <FormField control={form.control} name="cif" render={({ field }) => ( <FormItem> <FormLabel>CIF *</FormLabel> <FormControl><Input {...field} /></FormControl> <FormMessage /> </FormItem> )}/>
+             <FormField control={form.control} name="cif2" render={({ field }) => ( <FormItem> <FormLabel>CIF *</FormLabel> <FormControl><Input {...field} /></FormControl> <FormMessage /> </FormItem> )}/>
              <FormField control={form.control} name="direccion" render={({ field }) => ( <FormItem className="md:col-span-2"> <FormLabel>Dirección</FormLabel> <FormControl><Input {...field} /></FormControl> <FormMessage /> </FormItem> )}/>
              <FormField control={form.control} name="emailContacto" render={({ field }) => ( <FormItem> <FormLabel>Email Contacto</FormLabel> <FormControl><Input type="email" {...field} /></FormControl> <FormMessage /> </FormItem> )}/>
              <FormField control={form.control} name="telefonoContacto" render={({ field }) => ( <FormItem> <FormLabel>Teléfono Contacto</FormLabel> <FormControl><Input type="tel" {...field} /></FormControl> <FormMessage /> </FormItem> )}/>

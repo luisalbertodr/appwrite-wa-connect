@@ -6,7 +6,7 @@ import { Query, Models } from 'appwrite';
 export type UpdateConfigurationInput = Partial<{
   nombreClinica: string;
   direccion: string;
-  cif: string;
+  cif2: string;
   emailContacto: string;
   telefonoContacto: string;
   serieFactura: string;

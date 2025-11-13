@@ -2,7 +2,7 @@ import { LipooutDocument } from './index';
 
 export interface Proveedor extends LipooutDocument {
   nombre: string;
-  cif?: string;
+  cif2?: string;
   telefono?: string;
   email?: string;
   direccion?: string;

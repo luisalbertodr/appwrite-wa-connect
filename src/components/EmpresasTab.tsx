@@ -108,7 +108,7 @@ export const EmpresasTab = () => {
                             {empresas.length > 0 ? empresas.map(emp => (
                                 <TableRow key={emp.$id}>
                                     <TableCell className="font-medium">{emp.nombre}</TableCell>
-                                    <TableCell>{emp.cif}</TableCell>
+                                    <TableCell>{emp.cif2}</TableCell>
                                     <TableCell>
                                         <Badge variant={emp.activa ? 'default' : 'secondary'}>
                                             {emp.activa ? 'Activa' : 'Inactiva'}
