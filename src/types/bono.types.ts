@@ -45,7 +45,7 @@ export interface BonoCliente extends LipooutDocument {
 }
 
 /**
- * Tipo para crear/actualizar bonos de cliente
+ * Tipo para crear/actualizar bonos de cliente (sin empresa_id, se inyecta en el servicio)
  */
 export interface BonoClienteInput {
   cliente_id: string;

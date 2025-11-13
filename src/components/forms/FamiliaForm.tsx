@@ -1,7 +1,8 @@
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Familia, LipooutUserInput } from '@/types';
+import { FamiliaInput } from '@/services/appwrite-articulos';
+import { Familia } from '@/types';
 import { Models } from 'appwrite';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,7 +12,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface FamiliaFormProps {
   familiaInicial?: (Familia & Models.Document) | null;
-  onSubmit: (data: LipooutUserInput<Omit<Familia, keyof Models.Document>>) => Promise<void>;
+  onSubmit: (data: FamiliaInput) => Promise<void>;
   isSubmitting: boolean;
 }
 
@@ -48,7 +49,7 @@ export const FamiliaForm = ({ familiaInicial, onSubmit, isSubmitting }: FamiliaF
   });
 
   const handleSubmit = async (data: FamiliaFormData) => {
-    const finalData: LipooutUserInput<Omit<Familia, keyof Models.Document>> = {
+    const finalData: FamiliaInput = {
       nombre: data.nombre,
       color: data.color,
       descripcion: data.descripcion || undefined,

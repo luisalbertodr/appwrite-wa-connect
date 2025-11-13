@@ -239,7 +239,11 @@ module.exports = async ({ req, res, log, error }) => {
                 clientToSave.edad = newClientRecord.fecnac ? calculateAge(newClientRecord.fecnac) : undefined;
                 clientToSave.importErrors = Object.values(warnings);
                 // CÁLCULO Y ASIGNACIÓN DE search_unified INLINE
-                clientToSave.search_unified = generateSearchUnified(clientToSave); 
+                clientToSave.search_unified = generateSearchUnified(clientToSave);
+                
+                // MULTIEMPRESA: Inyectar empresa_id desde variable de entorno
+                const empresaId = process.env.APPWRITE_EMPRESA_ID || 'ID_EMPRESA_ACTUAL_PLACEHOLDER';
+                clientToSave.empresa_id = empresaId;
                 
                 let clientId;
                 const existing = await databases.listDocuments(DATABASE_ID, CLIENTS_COLLECTION_ID, [Query.equal('codcli', newClientRecord.codcli)]);

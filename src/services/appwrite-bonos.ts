@@ -7,8 +7,8 @@ import { ID, Query, Models } from 'appwrite';
 // =========================================================================
 const getEmpresaActualId = () => "ID_EMPRESA_ACTUAL_PLACEHOLDER"; 
 
-// Tipos Input
-export type CreateBonoClienteInput = LipooutUserInput<BonoCliente>;
+// Tipos Input (sin empresa_id, se inyecta en el servicio)
+export type CreateBonoClienteInput = Omit<LipooutUserInput<BonoCliente>, 'empresa_id'>;
 export type UpdateBonoClienteInput = Partial<CreateBonoClienteInput>;
 
 // --- Funciones de Servicio ---

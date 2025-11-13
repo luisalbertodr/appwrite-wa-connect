@@ -10,9 +10,11 @@ import {
   verificarExpiracionBonos,
   desactivarBonosExpirados,
   deleteBonoCliente,
-  getEstadisticasBonos
+  getEstadisticasBonos,
+  CreateBonoClienteInput,
+  UpdateBonoClienteInput
 } from '../services/appwrite-bonos';
-import type { BonoCliente, BonoClienteInput } from '../types/bono.types';
+import type { BonoCliente } from '../types/bono.types';
 
 export function useBonos(clienteId?: string) {
   const [bonos, setBonos] = useState<BonoCliente[]>([]);
@@ -72,8 +74,8 @@ export function useBonos(clienteId?: string) {
     }
   }, [clienteId]);
 
-  // Crear nuevo bono
-  const createBono = useCallback(async (bono: BonoClienteInput) => {
+  // Crear nuevo bono (el servicio inyecta empresa_id automáticamente)
+  const createBono = useCallback(async (bono: CreateBonoClienteInput) => {
     setLoading(true);
     setError(null);
     try {
@@ -91,7 +93,7 @@ export function useBonos(clienteId?: string) {
   }, [loadBonos]);
 
   // Actualizar bono
-  const updateBono = useCallback(async (id: string, bono: Partial<BonoClienteInput>) => {
+  const updateBono = useCallback(async (id: string, bono: UpdateBonoClienteInput) => {
     setLoading(true);
     setError(null);
     try {

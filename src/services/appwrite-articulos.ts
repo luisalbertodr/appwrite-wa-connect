@@ -10,8 +10,8 @@ const getEmpresaActualId = () => "ID_EMPRESA_ACTUAL_PLACEHOLDER";
 
 // --- API de Familias ---
 
-// (NUEVO) Tipo Input para Familia
-export type FamiliaInput = LipooutUserInput<Familia>; 
+// Tipo Input para formularios (sin empresa_id, se inyecta en el servicio)
+export type FamiliaInput = Omit<LipooutUserInput<Familia>, 'empresa_id'>;
 // Define el tipo de objeto que se enviará a Appwrite (Input + empresa_id)
 type FamiliaPayload = FamiliaInput & { empresa_id: string };
 
