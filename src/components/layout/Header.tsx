@@ -16,8 +16,9 @@ import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { NotificationsPopover } from './NotificationsPopover';
+import { EmpresaSwitcher } from '@/components/EmpresaSwitcher';
 // Importamos las dependencias de Appwrite Storage
-import { client, CONFIG_BUCKET_ID } from '@/lib/appwrite'; 
+import { client, CONFIG_BUCKET_ID } from '@/lib/appwrite';
 
 const navItems = [
   { href: '/', label: 'Inicio', icon: Home },
@@ -108,8 +109,11 @@ const Header = () => {
         })}
       </nav>
 
-      {/* Fecha/Hora, Notificaciones y Menú de Usuario */}
+      {/* Fecha/Hora, Empresa, Notificaciones y Menú de Usuario */}
       <div className="flex items-center gap-4">
+        {/* Selector de Empresa */}
+        <EmpresaSwitcher />
+
         {/* Fecha y Hora */}
         <div className="hidden md:flex flex-col items-end">
           <div className="text-sm font-semibold capitalize">

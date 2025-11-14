@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useEmpresa } from '@/contexts/EmpresaContext';
 import {
   getSesionesByCliente,
   getSesionesByEmpleado,
@@ -18,22 +19,23 @@ import {
 import type { SesionClinica, SesionClinicaInput } from '../types/sesion-clinica.types';
 
 export function useSesionesClinicas(clienteId?: string, empleadoId?: string) {
+  const { empresaActiva } = useEmpresa();
   const [sesiones, setSesiones] = useState<SesionClinica[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Cargar sesiones
   const loadSesiones = useCallback(async () => {
-    if (!clienteId && !empleadoId) return;
+    if (!empresaActiva || (!clienteId && !empleadoId)) return;
 
     setLoading(true);
     setError(null);
     try {
       let data: SesionClinica[];
       if (clienteId) {
-        data = await getSesionesByCliente(clienteId);
+        data = await getSesionesByCliente(empresaActiva.$id, clienteId);
       } else if (empleadoId) {
-        data = await getSesionesByEmpleado(empleadoId);
+        data = await getSesionesByEmpleado(empresaActiva.$id, empleadoId);
       } else {
         data = [];
       }
@@ -44,31 +46,37 @@ export function useSesionesClinicas(clienteId?: string, empleadoId?: string) {
     } finally {
       setLoading(false);
     }
-  }, [clienteId, empleadoId]);
+  }, [empresaActiva, clienteId, empleadoId]);
 
   // Cargar sesiones al montar el componente
   useEffect(() => {
-    if (clienteId || empleadoId) {
+    if (empresaActiva && (clienteId || empleadoId)) {
       loadSesiones();
     }
-  }, [clienteId, empleadoId, loadSesiones]);
+  }, [empresaActiva, clienteId, empleadoId, loadSesiones]);
 
   // Obtener sesión por cita
   const getSesionPorCita = useCallback(async (citaId: string) => {
+    if (!empresaActiva) {
+      console.error('No hay empresa activa');
+      return null;
+    }
     try {
-      return await getSesionByCita(citaId);
+      return await getSesionByCita(empresaActiva.$id, citaId);
     } catch (err) {
       console.error('Error al obtener sesión por cita:', err);
       return null;
     }
-  }, []);
+  }, [empresaActiva]);
 
   // Crear nueva sesión
   const createSesion = useCallback(async (sesion: SesionClinicaInput) => {
+    if (!empresaActiva) throw new Error('No hay empresa activa');
+    
     setLoading(true);
     setError(null);
     try {
-      const nuevaSesion = await createSesionClinica(sesion);
+      const nuevaSesion = await createSesionClinica(empresaActiva.$id, sesion);
       await loadSesiones();
       return nuevaSesion;
     } catch (err) {
@@ -79,14 +87,16 @@ export function useSesionesClinicas(clienteId?: string, empleadoId?: string) {
     } finally {
       setLoading(false);
     }
-  }, [loadSesiones]);
+  }, [empresaActiva, loadSesiones]);
 
   // Actualizar sesión
   const updateSesion = useCallback(async (id: string, sesion: Partial<SesionClinicaInput>) => {
+    if (!empresaActiva) throw new Error('No hay empresa activa');
+    
     setLoading(true);
     setError(null);
     try {
-      const sesionActualizada = await updateSesionClinica({ $id: id, data: sesion });
+      const sesionActualizada = await updateSesionClinica(empresaActiva.$id, { $id: id, data: sesion });
       await loadSesiones();
       return sesionActualizada;
     } catch (err) {
@@ -97,14 +107,16 @@ export function useSesionesClinicas(clienteId?: string, empleadoId?: string) {
     } finally {
       setLoading(false);
     }
-  }, [loadSesiones]);
+  }, [empresaActiva, loadSesiones]);
 
   // Eliminar sesión
   const deleteSesion = useCallback(async (id: string) => {
+    if (!empresaActiva) throw new Error('No hay empresa activa');
+    
     setLoading(true);
     setError(null);
     try {
-      await deleteSesionClinica(id);
+      await deleteSesionClinica(empresaActiva.$id, id);
       await loadSesiones();
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Error al eliminar sesión';
@@ -114,7 +126,7 @@ export function useSesionesClinicas(clienteId?: string, empleadoId?: string) {
     } finally {
       setLoading(false);
     }
-  }, [loadSesiones]);
+  }, [empresaActiva, loadSesiones]);
 
   // Subir documento firmado
   const subirDocumentoFirmado = useCallback(async (file: File, sesionId: string) => {
@@ -178,25 +190,30 @@ export function useSesionesClinicas(clienteId?: string, empleadoId?: string) {
 
   // Obtener estadísticas
   const getEstadisticas = useCallback(async () => {
-    if (!clienteId) return null;
+    if (!empresaActiva || !clienteId) return null;
 
     try {
-      return await getEstadisticasSesiones(clienteId);
+      return await getEstadisticasSesiones(empresaActiva.$id, clienteId);
     } catch (err) {
       console.error('Error al obtener estadísticas:', err);
       return null;
     }
-  }, [clienteId]);
+  }, [empresaActiva, clienteId]);
 
   // Obtener sesiones por rango de fechas
-  const getSesionesPorRango = useCallback(async (fechaInicio: string, fechaFin: string) => {
+  const getSesionesPorRango = useCallback(async (fechaInicio: string, fechaFin: string, empleadoId?: string) => {
+    if (!empresaActiva) {
+      console.error('No hay empresa activa');
+      return [];
+    }
+    
     try {
-      return await getSesionesByRangoFechas(fechaInicio, fechaFin);
+      return await getSesionesByRangoFechas(empresaActiva.$id, fechaInicio, fechaFin, empleadoId);
     } catch (err) {
       console.error('Error al obtener sesiones por rango:', err);
       return [];
     }
-  }, []);
+  }, [empresaActiva]);
 
   return {
     sesiones,

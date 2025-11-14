@@ -7,23 +7,34 @@ import {
   FamiliaInput 
 } from '@/services/appwrite-articulos';
 import { useToast } from '@/hooks/use-toast';
+import { useEmpresa } from '@/contexts/EmpresaContext';
 
 export const useFamilias = () => {
+  const { empresaActiva } = useEmpresa();
+
   return useQuery({
-    queryKey: ['familias'],
-    queryFn: getFamilias
+    queryKey: ['familias', empresaActiva?.$id],
+    queryFn: () => {
+      if (!empresaActiva) throw new Error('No hay empresa activa');
+      return getFamilias(empresaActiva.$id);
+    },
+    enabled: !!empresaActiva
   });
 };
 
 export const useCreateFamilia = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { empresaActiva } = useEmpresa();
 
   return useMutation({
-    mutationFn: (familiaInput: FamiliaInput) => createFamilia(familiaInput),
+    mutationFn: (familiaInput: FamiliaInput) => {
+      if (!empresaActiva) throw new Error('No hay empresa activa');
+      return createFamilia(empresaActiva.$id, familiaInput);
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['familias'] });
-      queryClient.invalidateQueries({ queryKey: ['articulos'] });
+      queryClient.invalidateQueries({ queryKey: ['familias', empresaActiva?.$id] });
+      queryClient.invalidateQueries({ queryKey: ['articulos', empresaActiva?.$id] });
       toast({
         title: 'Familia creada',
         description: 'La familia se ha creado correctamente.',
@@ -42,13 +53,16 @@ export const useCreateFamilia = () => {
 export const useUpdateFamilia = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { empresaActiva } = useEmpresa();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: Partial<FamiliaInput> }) => 
-      updateFamilia(id, data),
+    mutationFn: ({ id, data }: { id: string; data: Partial<FamiliaInput> }) => {
+      if (!empresaActiva) throw new Error('No hay empresa activa');
+      return updateFamilia(empresaActiva.$id, id, data);
+    },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['familias'] });
-      queryClient.invalidateQueries({ queryKey: ['articulos'] });
+      queryClient.invalidateQueries({ queryKey: ['familias', empresaActiva?.$id] });
+      queryClient.invalidateQueries({ queryKey: ['articulos', empresaActiva?.$id] });
       toast({
         title: 'Familia actualizada',
         description: 'La familia se ha actualizado correctamente.',
@@ -67,12 +81,13 @@ export const useUpdateFamilia = () => {
 export const useDeleteFamilia = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { empresaActiva } = useEmpresa();
 
   return useMutation({
     mutationFn: (id: string) => deleteFamilia(id),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['familias'] });
-      queryClient.invalidateQueries({ queryKey: ['articulos'] });
+      queryClient.invalidateQueries({ queryKey: ['familias', empresaActiva?.$id] });
+      queryClient.invalidateQueries({ queryKey: ['articulos', empresaActiva?.$id] });
       toast({
         title: 'Familia eliminada',
         description: 'La familia se ha eliminado correctamente.',

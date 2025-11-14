@@ -5,9 +5,12 @@ import type { PlantillaDocumento, PlantillaDocumentoInput, TipoPlantilla } from 
 /**
  * Obtener todas las plantillas de documentos
  */
-export async function getAllPlantillas(soloActivas: boolean = false): Promise<PlantillaDocumento[]> {
+export async function getAllPlantillas(empresaId: string, soloActivas: boolean = false): Promise<PlantillaDocumento[]> {
   try {
-    const queries = [Query.limit(100)];
+    const queries = [
+      Query.equal('empresa_id', empresaId),
+      Query.limit(100)
+    ];
     
     if (soloActivas) {
       queries.push(Query.equal('activa', true));
@@ -46,13 +49,18 @@ export async function getAllPlantillas(soloActivas: boolean = false): Promise<Pl
 /**
  * Obtener una plantilla por ID
  */
-export async function getPlantillaById(id: string): Promise<PlantillaDocumento> {
+export async function getPlantillaById(empresaId: string, id: string): Promise<PlantillaDocumento> {
   try {
     const doc = await databases.getDocument(
       DATABASE_ID,
       PLANTILLAS_DOCUMENTOS_COLLECTION_ID,
       id
     );
+
+    // Verificar que pertenece a la empresa
+    if (doc.empresa_id !== empresaId) {
+      throw new Error('Plantilla no pertenece a la empresa');
+    }
 
     return {
       $id: doc.$id,
@@ -81,12 +89,16 @@ export async function getPlantillaById(id: string): Promise<PlantillaDocumento> 
 /**
  * Obtener plantillas por tipo
  */
-export async function getPlantillasByTipo(tipo: TipoPlantilla): Promise<PlantillaDocumento[]> {
+export async function getPlantillasByTipo(empresaId: string, tipo: TipoPlantilla): Promise<PlantillaDocumento[]> {
   try {
     const response = await databases.listDocuments(
       DATABASE_ID,
       PLANTILLAS_DOCUMENTOS_COLLECTION_ID,
-      [Query.equal('tipo', tipo), Query.equal('activa', true)]
+      [
+        Query.equal('empresa_id', empresaId),
+        Query.equal('tipo', tipo),
+        Query.equal('activa', true)
+      ]
     );
 
     return response.documents.map(doc => ({
@@ -116,9 +128,10 @@ export async function getPlantillasByTipo(tipo: TipoPlantilla): Promise<Plantill
 /**
  * Crear una nueva plantilla
  */
-export async function createPlantilla(plantilla: PlantillaDocumentoInput): Promise<PlantillaDocumento> {
+export async function createPlantilla(empresaId: string, plantilla: PlantillaDocumentoInput): Promise<PlantillaDocumento> {
   try {
     const data = {
+      empresa_id: empresaId,
       nombre: plantilla.nombre,
       tipo: plantilla.tipo,
       descripcion: plantilla.descripcion || '',
@@ -164,8 +177,11 @@ export async function createPlantilla(plantilla: PlantillaDocumentoInput): Promi
 /**
  * Actualizar una plantilla
  */
-export async function updatePlantilla(id: string, plantilla: Partial<PlantillaDocumentoInput>): Promise<PlantillaDocumento> {
+export async function updatePlantilla(empresaId: string, id: string, plantilla: Partial<PlantillaDocumentoInput>): Promise<PlantillaDocumento> {
   try {
+    // Verificar que la plantilla pertenece a la empresa
+    await getPlantillaById(empresaId, id);
+
     const data: any = {};
     
     if (plantilla.nombre !== undefined) data.nombre = plantilla.nombre;
@@ -212,9 +228,9 @@ export async function updatePlantilla(id: string, plantilla: Partial<PlantillaDo
 /**
  * Desactivar una plantilla (en lugar de eliminarla)
  */
-export async function desactivarPlantilla(id: string): Promise<PlantillaDocumento> {
+export async function desactivarPlantilla(empresaId: string, id: string): Promise<PlantillaDocumento> {
   try {
-    return await updatePlantilla(id, { activa: false });
+    return await updatePlantilla(empresaId, id, { activa: false });
   } catch (error) {
     console.error('Error al desactivar plantilla:', error);
     throw error;
@@ -224,8 +240,11 @@ export async function desactivarPlantilla(id: string): Promise<PlantillaDocument
 /**
  * Eliminar una plantilla
  */
-export async function deletePlantilla(id: string): Promise<void> {
+export async function deletePlantilla(empresaId: string, id: string): Promise<void> {
   try {
+    // Verificar que la plantilla pertenece a la empresa
+    await getPlantillaById(empresaId, id);
+
     await databases.deleteDocument(
       DATABASE_ID,
       PLANTILLAS_DOCUMENTOS_COLLECTION_ID,
@@ -274,6 +293,7 @@ export function rellenarPlantilla(
  * Subir archivo base de plantilla (ej: PDF vacío para rellenar)
  */
 export async function uploadArchivoBasePlantilla(
+  empresaId: string,
   file: File,
   plantillaId: string
 ): Promise<string> {
@@ -285,7 +305,7 @@ export async function uploadArchivoBasePlantilla(
     );
 
     // Actualizar la plantilla con el ID del archivo
-    await updatePlantilla(plantillaId, {
+    await updatePlantilla(empresaId, plantillaId, {
       archivo_base_id: response.$id
     });
 
@@ -316,11 +336,12 @@ export function getArchivoBasePlantillaUrl(archivoId: string): string {
  * Duplicar plantilla (crear nueva versión)
  */
 export async function duplicarPlantilla(
+  empresaId: string,
   plantillaId: string,
   nuevoNombre?: string
 ): Promise<PlantillaDocumento> {
   try {
-    const plantillaOriginal = await getPlantillaById(plantillaId);
+    const plantillaOriginal = await getPlantillaById(empresaId, plantillaId);
 
     const nuevaPlantilla: PlantillaDocumentoInput = {
       nombre: nuevoNombre || `${plantillaOriginal.nombre} (Copia)`,
@@ -334,7 +355,7 @@ export async function duplicarPlantilla(
       version: '1' // Nueva versión empieza en '1' como string
     };
 
-    return await createPlantilla(nuevaPlantilla);
+    return await createPlantilla(empresaId, nuevaPlantilla);
   } catch (error) {
     console.error('Error al duplicar plantilla:', error);
     throw error;

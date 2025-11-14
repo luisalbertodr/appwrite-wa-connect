@@ -20,7 +20,7 @@ import LoadingSpinner from '@/components/LoadingSpinner';
 
 interface ArticuloFormProps {
   articuloInicial?: (Articulo & Models.Document) | null;
-  onSubmit: (data: LipooutUserInput<ArticuloInput>) => Promise<void>;
+  onSubmit: (data: ArticuloFormData) => Promise<void>;
   isSubmitting: boolean;
 }
 
@@ -138,42 +138,24 @@ export const ArticuloForm = ({ articuloInicial, onSubmit, isSubmitting }: Articu
   const handleSubmit = async (data: ArticuloFormData) => {
     console.log('📝 ArticuloForm - Datos del formulario:', data);
     
-    // Convertir a ArticuloInput (tipo base para Appwrite)
-    const finalData: LipooutUserInput<ArticuloInput> = {
-        ...data,
-        // Asegurar que los campos opcionales sean undefined si no aplican o están vacíos
-        descripcion: data.descripcion || undefined,
-        duracion: (data.tipo === 'servicio' || data.tipo === 'bono') ? (data.duracion ?? undefined) : undefined,
-        stock: data.tipo === 'producto' ? (data.stock ?? undefined) : undefined,
-        color: data.tipo === 'servicio' ? (data.color ?? undefined) : undefined, 
-        
-        // LÓGICA DE BONO: COMPOSICIÓN Y SESIONES TOTALES
-        sesiones_bono: undefined, // Se calculará si es 'bono'
-        composicion_bono: undefined, // Se serializará si es 'bono'
+    // Validar composición para bonos antes de enviar
+    if (data.tipo === 'bono' && composicion.length === 0) {
+        console.error('El bono debe tener composición');
+        alert('Error: Un bono debe tener al menos un servicio o producto en su composición.');
+        return; 
+    }
+
+    // Preparar datos adicionales para bonos
+    const dataConComposicion: ArticuloFormData & { composicion?: ComposicionBono[] } = {
+        ...data
     };
     
     if (data.tipo === 'bono') {
-        if (composicion.length === 0) {
-            // Se debe usar un toast para notificar al usuario en el UI real
-            console.error('El bono debe tener composición');
-            alert('Error: Un bono debe tener al menos un servicio o producto en su composición.');
-            return; 
-        }
-
-        finalData.composicion_bono = JSON.stringify(composicion);
-        
-        // Recalcular el total de usos/sesiones del bono
-        const totalSesiones = composicion.reduce((sum, item) => sum + item.cantidad, 0);
-        finalData.sesiones_bono = totalSesiones; 
-        
-    } else {
-        // Limpiar campos de bono si no es un bono
-        finalData.sesiones_bono = undefined;
-        finalData.composicion_bono = undefined;
+        dataConComposicion.composicion = composicion;
     }
 
-    console.log('✅ ArticuloForm - Datos finales a enviar:', finalData);
-    await onSubmit(finalData);
+    console.log('✅ ArticuloForm - Datos a enviar:', dataConComposicion);
+    await onSubmit(dataConComposicion as ArticuloFormData);
   };
 
   return (

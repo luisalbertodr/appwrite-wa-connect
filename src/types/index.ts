@@ -132,6 +132,7 @@ export * from './notificacion.types';
 export * from './permiso.types';
 export * from './plantilla-documento.types';
 export * from './empresa.types'; 
+export * from './usuario-empresa.types';
 
 // Exportaciones explícitas de tipos de artículo (ArticuloEnCita y TiempoNoBillable están en articulo.types.ts)
 export type { ArticuloEnCita, TiempoNoBillable, ItemCita } from './articulo.types';

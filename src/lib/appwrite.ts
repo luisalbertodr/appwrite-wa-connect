@@ -39,7 +39,8 @@ export const CONFIGURATION_COLLECTION_ID = 'configuracion';
 export const RECURSOS_COLLECTION_ID = 'recursos';
 export const APARATOS_COLLECTION_ID = 'aparatos';
 export const PROVEEDORES_COLLECTION_ID = 'proveedores';
-export const EMPRESAS_COLLECTION_ID = 'empresas'; // <--- AÑADIDO
+export const EMPRESAS_COLLECTION_ID = 'empresas';
+export const USUARIO_EMPRESAS_COLLECTION_ID = 'usuario_empresas'; // <--- Relación many-to-many usuario-empresa
 
 // Colecciones de datos clínicos y bonos
 export const BONOS_CLIENTE_COLLECTION_ID = 'bonos_cliente';

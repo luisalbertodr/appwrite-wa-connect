@@ -4,21 +4,13 @@ import { ID, Query, Models } from 'appwrite';
 import { startOfDay, formatISO, addDays, startOfWeek } from 'date-fns';
 import { updateCliente } from './appwrite-clientes';
 
-// =========================================================================
-// CAMBIO MULTIEMPRESA: OBTENER CONTEXTO DE EMPRESA
-// NOTA: Esta función DEBE ser implementada en el frontend (ej. useEmpresaContext)
-// y provista a los servicios. Aquí usamos un placeholder.
-// =========================================================================
-const getEmpresaActualId = () => "ID_EMPRESA_ACTUAL_PLACEHOLDER"; 
-
-// Tipos Create/Update Input (Asegúrate que coincidan con tu definición)
+// Tipos Create/Update Input
 export type CreateCitaInput = CitaInput;
 export type UpdateCitaInput = Partial<CitaInput>;
 
 
 // Búsqueda de citas por datos del cliente (iterativa acumulativa)
-export const buscarCitas = async (searchQuery: string): Promise<(Cita & Models.Document)[]> => {
-  const empresaId = getEmpresaActualId(); // OBTENER EMPRESA ID
+export const buscarCitas = async (empresaId: string, searchQuery: string): Promise<(Cita & Models.Document)[]> => {
 
   if (!searchQuery || searchQuery.trim() === "") {
     // Sin búsqueda, devolver citas recientes
@@ -94,8 +86,7 @@ export const buscarCitas = async (searchQuery: string): Promise<(Cita & Models.D
   return Array.from(citasMap.values());
 };
 
-export const getCitasPorDia = async (fecha: Date): Promise<(Cita & Models.Document)[]> => {
-  const empresaId = getEmpresaActualId(); // OBTENER EMPRESA ID
+export const getCitasPorDia = async (empresaId: string, fecha: Date): Promise<(Cita & Models.Document)[]> => {
     
   const startOfDayDate = startOfDay(fecha);
   const startOfNextDayDate = startOfDay(addDays(fecha, 1)); 
@@ -132,8 +123,7 @@ export const getCitasPorDia = async (fecha: Date): Promise<(Cita & Models.Docume
 };
 
 // Obtener citas de toda la semana (Lunes a Sábado)
-export const getCitasPorSemana = async (fecha: Date): Promise<(Cita & Models.Document)[]> => {
-  const empresaId = getEmpresaActualId(); // OBTENER EMPRESA ID
+export const getCitasPorSemana = async (empresaId: string, fecha: Date): Promise<(Cita & Models.Document)[]> => {
     
   // Obtener inicio de semana (Lunes)
   const inicioSemana = startOfWeek(fecha, { weekStartsOn: 1 });
@@ -194,8 +184,7 @@ const cleanUndefinedFields = <T extends Record<string, any>>(obj: T): Partial<T>
 };
 
 // --- createCita (con Logs detallados) ---
-export const createCita = async (cita: LipooutUserInput<CitaInput>): Promise<Cita & Models.Document> => {
-    const empresaId = getEmpresaActualId(); // OBTENER EMPRESA ID
+export const createCita = async (empresaId: string, cita: LipooutUserInput<CitaInput>): Promise<Cita & Models.Document> => {
     
     // VALIDAR que cliente_nombre esté presente
     if (!cita.cliente_nombre || cita.cliente_nombre.trim() === '') {
@@ -230,8 +219,7 @@ export const createCita = async (cita: LipooutUserInput<CitaInput>): Promise<Cit
 };
 
 // --- updateCita ---
-export const updateCita = async (id: string, data: Partial<LipooutUserInput<CitaInput>>): Promise<Cita & Models.Document> => {
-    const empresaId = getEmpresaActualId(); // OBTENER EMPRESA ID
+export const updateCita = async (empresaId: string, id: string, data: Partial<LipooutUserInput<CitaInput>>): Promise<Cita & Models.Document> => {
     
     // Si se actualiza cliente_id, validar que también venga cliente_nombre
     if (data.cliente_id && (!data.cliente_nombre || data.cliente_nombre.trim() === '')) {
@@ -261,10 +249,7 @@ export const updateCita = async (id: string, data: Partial<LipooutUserInput<Cita
 };
 
 // --- deleteCita (Preservando Historial) ---
-export const deleteCita = async (id: string): Promise<void> => {
-    // La obtención del ID de la empresa no es necesaria aquí, ya que se asume que 
-    // el usuario está logueado en una empresa y tiene permisos para eliminar la cita.
-    // Además, updateCliente y getDocument internos ya deben usar los filtros de Appwrite.
+export const deleteCita = async (empresaId: string, id: string): Promise<void> => {
     
     console.log(`%c=== ELIMINAR CITA ${id} ===`, 'color: red; font-weight: bold;');
     try {
@@ -313,8 +298,8 @@ export const deleteCita = async (id: string): Promise<void> => {
                 }
                 const nuevoHistorial = [...historialActual, entradaHistorial];
                 
-                // 6. Actualizar el cliente con el nuevo historial (updateCliente inyectará empresa_id)
-                await updateCliente({
+                // 6. Actualizar el cliente con el nuevo historial
+                await updateCliente(empresaId, {
                     $id: cliente.$id,
                     data: {
                         historial_citas: JSON.stringify(nuevoHistorial) as any
@@ -345,11 +330,11 @@ export const deleteCita = async (id: string): Promise<void> => {
 
 // Obtener citas por rango de fechas
 export const getCitasPorRango = async (
+  empresaId: string,
   fechaInicio: Date,
   fechaFin: Date,
   empleadoId?: string
 ): Promise<(Cita & Models.Document)[]> => {
-  const empresaId = getEmpresaActualId(); // OBTENER EMPRESA ID
 
   const inicioISO = formatISO(fechaInicio);
   const finISO = formatISO(fechaFin);

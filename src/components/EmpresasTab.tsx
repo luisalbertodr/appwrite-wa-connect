@@ -45,11 +45,18 @@ export const EmpresasTab = () => {
                 toast({ title: "Empresa actualizada", description: `Los datos de ${data.nombre} han sido guardados.` });
             } else {
                 await createEmpresa(data);
-                toast({ title: "Empresa creada", description: `El nuevo centro ${data.nombre} ha sido registrado.` });
+                toast({ 
+                    title: "Empresa creada", 
+                    description: `El nuevo centro ${data.nombre} ha sido registrado y asignado a tu cuenta.` 
+                });
             }
             setSheetOpen(false);
+            // Recargar la lista de empresas
+            window.location.reload(); // Recargar para actualizar el contexto
         } catch (err) {
-            toast({ title: "Error", description: (err as Error).message, variant: "destructive" });
+            const errorMessage = err instanceof Error ? err.message : 'Error desconocido';
+            toast({ title: "Error", description: errorMessage, variant: "destructive" });
+            console.error('Error al guardar empresa:', err);
         }
     };
 

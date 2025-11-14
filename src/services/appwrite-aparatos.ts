@@ -5,8 +5,11 @@ import { ID, Query, Models } from 'appwrite';
 export type CreateAparatoInput = LipooutUserInput<Aparato>;
 export type UpdateAparatoInput = Partial<CreateAparatoInput>;
 
-export const getAparatos = async (soloActivos: boolean = true): Promise<(Aparato & Models.Document)[]> => {
-  const queries = [Query.limit(100)];
+export const getAparatos = async (empresaId: string, soloActivos: boolean = true): Promise<(Aparato & Models.Document)[]> => {
+  const queries = [
+    Query.equal('empresa_id', empresaId),
+    Query.limit(100)
+  ];
   if (soloActivos) {
     queries.push(Query.equal('activo', true));
   }
@@ -18,8 +21,11 @@ export const getAparatos = async (soloActivos: boolean = true): Promise<(Aparato
   return response.documents;
 };
 
-export const createAparato = (aparatoInput: CreateAparatoInput) => {
-  const aparatoToSave: any = { ...aparatoInput };
+export const createAparato = (empresaId: string, aparatoInput: CreateAparatoInput) => {
+  const aparatoToSave: any = { 
+    ...aparatoInput,
+    empresa_id: empresaId
+  };
   
   // Limpiar campos undefined
   Object.keys(aparatoToSave).forEach(key => {
@@ -36,8 +42,11 @@ export const createAparato = (aparatoInput: CreateAparatoInput) => {
   );
 };
 
-export const updateAparato = (id: string, aparatoInput: UpdateAparatoInput) => {
-  const aparatoToUpdate: any = { ...aparatoInput };
+export const updateAparato = (empresaId: string, id: string, aparatoInput: UpdateAparatoInput) => {
+  const aparatoToUpdate: any = { 
+    ...aparatoInput,
+    empresa_id: empresaId
+  };
   
   // Limpiar campos undefined
   Object.keys(aparatoToUpdate).forEach(key => {
@@ -54,7 +63,7 @@ export const updateAparato = (id: string, aparatoInput: UpdateAparatoInput) => {
   );
 };
 
-export const deleteAparato = (id: string) => {
+export const deleteAparato = (empresaId: string, id: string) => {
   return databases.deleteDocument(
     DATABASE_ID,
     APARATOS_COLLECTION_ID,

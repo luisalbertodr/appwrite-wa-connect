@@ -148,15 +148,6 @@
                     "encrypt": false
                 },
                 {
-                    "key": "cif",
-                    "type": "string",
-                    "required": true,
-                    "array": false,
-                    "size": 50,
-                    "default": null,
-                    "encrypt": false
-                },
-                {
                     "key": "activa",
                     "type": "boolean",
                     "required": true,
@@ -189,6 +180,15 @@
                     "size": 20,
                     "default": null,
                     "encrypt": false
+                },
+                {
+                    "key": "cif2",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 50,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
             "indexes": [
@@ -202,11 +202,11 @@
                     "orders": []
                 },
                 {
-                    "key": "idx_cif",
+                    "key": "index_2",
                     "type": "unique",
-                    "status": "failed",
+                    "status": "available",
                     "columns": [
-                        "cif"
+                        "cif2"
                     ],
                     "orders": [
                         "ASC"
@@ -439,6 +439,15 @@
                     "size": 1024,
                     "default": null,
                     "encrypt": false
+                },
+                {
+                    "key": "empresa_id",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
             "indexes": [
@@ -459,6 +468,17 @@
                     "status": "available",
                     "columns": [
                         "search_unified"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "index_3",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "empresa_id"
                     ],
                     "orders": [
                         "ASC"
@@ -710,9 +730,30 @@
                     "required": true,
                     "array": false,
                     "default": null
+                },
+                {
+                    "key": "empresa_id",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
-            "indexes": []
+            "indexes": [
+                {
+                    "key": "index_1",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "empresa_id"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                }
+            ]
         },
         {
             "$id": "empleados",
@@ -809,6 +850,24 @@
                     "required": false,
                     "array": false,
                     "default": true
+                },
+                {
+                    "key": "empresas_autorizadas",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 10000,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "empresa_activa_id",
+                    "type": "string",
+                    "required": false,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
             "indexes": []
@@ -852,9 +911,30 @@
                     "size": 50,
                     "default": null,
                     "encrypt": false
+                },
+                {
+                    "key": "empresa_id",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
-            "indexes": []
+            "indexes": [
+                {
+                    "key": "index_1",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "empresa_id"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                }
+            ]
         },
         {
             "$id": "articulos",
@@ -960,9 +1040,30 @@
                     "min": 0,
                     "max": 1440,
                     "default": null
+                },
+                {
+                    "key": "empresa_id",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
-            "indexes": []
+            "indexes": [
+                {
+                    "key": "index_1",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "empresa_id"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                }
+            ]
         },
         {
             "$id": "citas",
@@ -1080,6 +1181,15 @@
                     "size": 255,
                     "default": null,
                     "encrypt": false
+                },
+                {
+                    "key": "empresa_id",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
             "indexes": [
@@ -1089,6 +1199,17 @@
                     "status": "available",
                     "columns": [
                         "fecha_hora"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "index_2",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "empresa_id"
                     ],
                     "orders": [
                         "ASC"
@@ -1263,9 +1384,41 @@
                     "size": 100,
                     "default": null,
                     "encrypt": false
+                },
+                {
+                    "key": "empresa_id",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
-            "indexes": []
+            "indexes": [
+                {
+                    "key": "index_1",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "empresa_id"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "index_2",
+                    "type": "unique",
+                    "status": "available",
+                    "columns": [
+                        "numeroFactura"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                }
+            ]
         },
         {
             "$id": "bonos_cliente",
@@ -1394,9 +1547,41 @@
                     "size": 100,
                     "default": null,
                     "encrypt": false
+                },
+                {
+                    "key": "empresa_id",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
-            "indexes": []
+            "indexes": [
+                {
+                    "key": "index_1",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "empresa_id"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "index_2",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "cliente_id"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                }
+            ]
         },
         {
             "$id": "recursos",
@@ -1449,6 +1634,15 @@
                     "required": false,
                     "array": false,
                     "default": true
+                },
+                {
+                    "key": "empresa_id",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
             "indexes": [
@@ -1460,6 +1654,17 @@
                         "nombre"
                     ],
                     "orders": []
+                },
+                {
+                    "key": "index_2",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "empresa_id"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
                 }
             ]
         },
@@ -1563,6 +1768,15 @@
                     "required": false,
                     "array": false,
                     "default": true
+                },
+                {
+                    "key": "empresa_id",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
             "indexes": [
@@ -1574,6 +1788,17 @@
                         "nombre"
                     ],
                     "orders": []
+                },
+                {
+                    "key": "index_2",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "empresa_id"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
                 }
             ]
         },
@@ -1657,6 +1882,15 @@
                     "required": false,
                     "array": false,
                     "default": true
+                },
+                {
+                    "key": "empresa_id",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
             "indexes": [
@@ -1668,6 +1902,17 @@
                         "nombre"
                     ],
                     "orders": []
+                },
+                {
+                    "key": "index_2",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "empresa_id"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
                 }
             ]
         },
@@ -1822,9 +2067,30 @@
                     "min": 0,
                     "max": 10000,
                     "default": null
+                },
+                {
+                    "key": "empresa_id",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
-            "indexes": []
+            "indexes": [
+                {
+                    "key": "index_1",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "empresa_id"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                }
+            ]
         },
         {
             "$id": "auditoria",
@@ -1951,9 +2217,30 @@
                     "size": 1000,
                     "default": null,
                     "encrypt": false
+                },
+                {
+                    "key": "empresa_id",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
-            "indexes": []
+            "indexes": [
+                {
+                    "key": "index_1",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "empresa_id"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                }
+            ]
         },
         {
             "$id": "notificaciones",
@@ -2100,9 +2387,30 @@
                     "required": true,
                     "array": false,
                     "default": null
+                },
+                {
+                    "key": "empresa_id",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
-            "indexes": []
+            "indexes": [
+                {
+                    "key": "index_1",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "empresa_id"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                }
+            ]
         },
         {
             "$id": "message_logs",
@@ -2184,9 +2492,30 @@
                     "array": false,
                     "format": "",
                     "default": null
+                },
+                {
+                    "key": "empresa_id",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
-            "indexes": []
+            "indexes": [
+                {
+                    "key": "index_1",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "empresa_id"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                }
+            ]
         },
         {
             "$id": "templates",
@@ -2319,9 +2648,30 @@
                     "min": -1000000,
                     "max": 10000000,
                     "default": 0
+                },
+                {
+                    "key": "empresa_id",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
-            "indexes": []
+            "indexes": [
+                {
+                    "key": "index_1",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "empresa_id"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                }
+            ]
         },
         {
             "$id": "import_logs",
@@ -2432,9 +2782,30 @@
                     "array": false,
                     "format": "",
                     "default": null
+                },
+                {
+                    "key": "empresa_id",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
-            "indexes": []
+            "indexes": [
+                {
+                    "key": "index_1",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "empresa_id"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                }
+            ]
         },
         {
             "$id": "campaign_progress",
@@ -2506,9 +2877,30 @@
                     "size": 1000,
                     "default": null,
                     "encrypt": false
+                },
+                {
+                    "key": "empresa_id",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
-            "indexes": []
+            "indexes": [
+                {
+                    "key": "index_1",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "empresa_id"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                }
+            ]
         },
         {
             "$id": "sesiones_clinicas",
@@ -2646,9 +3038,41 @@
                     "size": 1000,
                     "default": null,
                     "encrypt": false
+                },
+                {
+                    "key": "empresa_id",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
                 }
             ],
-            "indexes": []
+            "indexes": [
+                {
+                    "key": "index_1",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "empresa_id"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                },
+                {
+                    "key": "index_2",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "cliente_id"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                }
+            ]
         },
         {
             "$id": "permisos",
@@ -2782,6 +3206,76 @@
                         "Lectura"
                     ],
                     "format": "enum",
+                    "default": null
+                },
+                {
+                    "key": "empresa_id",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
+                }
+            ],
+            "indexes": [
+                {
+                    "key": "index_1",
+                    "type": "key",
+                    "status": "available",
+                    "columns": [
+                        "empresa_id"
+                    ],
+                    "orders": [
+                        "ASC"
+                    ]
+                }
+            ]
+        },
+        {
+            "$id": "usuario_empresas",
+            "$permissions": [],
+            "databaseId": "68b1d7530028045d94d3",
+            "name": "usuario_empresas",
+            "enabled": true,
+            "rowSecurity": false,
+            "columns": [
+                {
+                    "key": "user_id",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "empresa_id",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "size": 100,
+                    "default": null,
+                    "encrypt": false
+                },
+                {
+                    "key": "rol_empresa",
+                    "type": "string",
+                    "required": true,
+                    "array": false,
+                    "elements": [
+                        "propietario",
+                        "empleado",
+                        "administrador"
+                    ],
+                    "format": "enum",
+                    "default": null
+                },
+                {
+                    "key": "activo",
+                    "type": "boolean",
+                    "required": true,
+                    "array": false,
                     "default": null
                 }
             ],

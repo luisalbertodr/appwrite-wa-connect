@@ -5,8 +5,11 @@ import { ID, Query, Models } from 'appwrite';
 export type CreateRecursoInput = LipooutUserInput<Recurso>;
 export type UpdateRecursoInput = Partial<CreateRecursoInput>;
 
-export const getRecursos = async (soloActivos: boolean = true): Promise<(Recurso & Models.Document)[]> => {
-  const queries = [Query.limit(100)];
+export const getRecursos = async (empresaId: string, soloActivos: boolean = true): Promise<(Recurso & Models.Document)[]> => {
+  const queries = [
+    Query.equal('empresa_id', empresaId),
+    Query.limit(100)
+  ];
   if (soloActivos) {
     queries.push(Query.equal('activo', true));
   }
@@ -18,8 +21,11 @@ export const getRecursos = async (soloActivos: boolean = true): Promise<(Recurso
   return response.documents;
 };
 
-export const createRecurso = (recursoInput: CreateRecursoInput) => {
-  const recursoToSave: any = { ...recursoInput };
+export const createRecurso = (empresaId: string, recursoInput: CreateRecursoInput) => {
+  const recursoToSave: any = {
+    empresa_id: empresaId,
+    ...recursoInput
+  };
   
   // Limpiar campos undefined
   Object.keys(recursoToSave).forEach(key => {
@@ -36,7 +42,18 @@ export const createRecurso = (recursoInput: CreateRecursoInput) => {
   );
 };
 
-export const updateRecurso = (id: string, recursoInput: UpdateRecursoInput) => {
+export const updateRecurso = async (empresaId: string, id: string, recursoInput: UpdateRecursoInput) => {
+  // Verificar que el recurso pertenece a la empresa
+  const recurso = await databases.getDocument(
+    DATABASE_ID,
+    RECURSOS_COLLECTION_ID,
+    id
+  );
+  
+  if (recurso.empresa_id !== empresaId) {
+    throw new Error('Recurso no pertenece a la empresa');
+  }
+
   const recursoToUpdate: any = { ...recursoInput };
   
   // Limpiar campos undefined
@@ -54,7 +71,18 @@ export const updateRecurso = (id: string, recursoInput: UpdateRecursoInput) => {
   );
 };
 
-export const deleteRecurso = (id: string) => {
+export const deleteRecurso = async (empresaId: string, id: string) => {
+  // Verificar que el recurso pertenece a la empresa
+  const recurso = await databases.getDocument(
+    DATABASE_ID,
+    RECURSOS_COLLECTION_ID,
+    id
+  );
+  
+  if (recurso.empresa_id !== empresaId) {
+    throw new Error('Recurso no pertenece a la empresa');
+  }
+
   return databases.deleteDocument(
     DATABASE_ID,
     RECURSOS_COLLECTION_ID,

@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, ChangeEvent } from 'react';
 import { useAppwriteCollection } from '@/hooks/useAppwrite';
 import { WahaConfig, LipooutUserInput } from '@/types';
-import type { Empleado, Recurso, Proveedor, HorarioApertura, Configuracion } from '@/types'; 
+import type { Empleado, Recurso, Proveedor, HorarioApertura, Configuracion } from '@/types';
+import { ConfigurationFormData } from '@/lib/validators';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -206,16 +207,29 @@ const Configuracion = () => {
   };
   
   // Manejador central para guardar Configuración Clínica (sin logo)
-  const handleSaveClinicConfig = async (data: LipooutUserInput<Configuracion>) => {
-       if (!clinicConfig?.$id) {
-           toast({ title: "Error", description: "No se encontró el ID de configuración.", variant: "destructive" });
-           return;
-       }
+    const handleSaveClinicConfig = async (data: ConfigurationFormData) => {
+        if (!clinicConfig?.$id) {
+            toast({ title: "Error", description: "No se encontró el ID de configuración.", variant: "destructive" });
+            return;
+        }
         try {
-            // Asegurar empresa_id al guardar
+            // Construir objeto completo agregando campos del sistema y mapeando campos opcionales
             const dataToSave: LipooutUserInput<Configuracion> = {
-                 ...data,
-                 empresa_id: clinicConfig.empresa_id,
+                empresa_id: clinicConfig.empresa_id,
+                nombreClinica: data.nombreClinica,
+                direccion: data.direccion ?? clinicConfig.direccion ?? '',
+                cif2: data.cif2,
+                emailContacto: data.emailContacto ?? clinicConfig.emailContacto ?? '',
+                telefonoContacto: data.telefonoContacto ?? clinicConfig.telefonoContacto ?? '',
+                serieFactura: data.serieFactura,
+                seriePresupuesto: data.seriePresupuesto,
+                tipoIvaPredeterminado: data.tipoIvaPredeterminado,
+                ultimoNumeroFactura: data.ultimoNumeroFactura ?? clinicConfig.ultimoNumeroFactura ?? 0,
+                ultimoNumeroPresupuesto: data.ultimoNumeroPresupuesto ?? clinicConfig.ultimoNumeroPresupuesto ?? 0,
+                horarios: data.horarios,
+                logoUrl: data.logoUrl,
+                logoText: data.logoText,
+                hideLogoText: data.hideLogoText,
             };
             
             await updateClinicMutation.mutateAsync({ id: clinicConfig.$id, data: dataToSave });
@@ -224,7 +238,7 @@ const Configuracion = () => {
         } catch (err) {
             toast({ title: "Error al guardar", description: (err as Error).message, variant: "destructive" });
         }
-  };
+    };
 
   // Manejador para subida de Logo y guardar Configuración
   const handleFileUploadAndSaveConfig = async (file: File) => {

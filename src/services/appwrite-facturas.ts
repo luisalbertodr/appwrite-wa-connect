@@ -4,19 +4,12 @@ import { Factura, CreateFacturaInput, UpdateFacturaInput, Cliente } from '@/type
 import { ID, Query, Models } from 'appwrite';
 import { getClientesByNombre } from '@/services/appwrite-clientes'; // Importar servicio de clientes
 
-// =========================================================================
-// CAMBIO MULTIEMPRESA: OBTENER CONTEXTO DE EMPRESA (Placeholder)
-// =========================================================================
-const getEmpresaActualId = () => "ID_EMPRESA_ACTUAL_PLACEHOLDER"; 
-
 // --- Funciones de Servicio ---
 
 // OBTENER facturas (MODIFICADO para aceptar filtros y multiempresa)
-export const getFacturas = async (searchQuery?: string, estado?: string): Promise<(Factura & Models.Document)[]> => {
-  const empresaId = getEmpresaActualId(); // OBTENER EMPRESA ID
-    
+export const getFacturas = async (empresaId: string, searchQuery?: string, estado?: string): Promise<(Factura & Models.Document)[]> => {
   const queries = [
-      Query.equal('empresa_id', empresaId), // FILTRO MULTIEMPRESA
+      Query.equal('empresa_id', empresaId),
       Query.limit(500),
       Query.orderDesc('fechaEmision'),
       Query.orderDesc('numeroFactura')
@@ -29,8 +22,7 @@ export const getFacturas = async (searchQuery?: string, estado?: string): Promis
   // MODIFICADO: Manejo de búsqueda
   if (searchQuery) {
       // 1. Buscar clientes que coincidan
-      // Note: getClientesByNombre also needs to be multi-empresa aware.
-      const clientesCoincidentes = await getClientesByNombre(searchQuery);
+      const clientesCoincidentes = await getClientesByNombre(empresaId, searchQuery);
       const clienteIds = clientesCoincidentes.map((c: Cliente & Models.Document) => c.$id);
 
       // 2. Construir query de búsqueda
@@ -62,11 +54,9 @@ export const getFacturas = async (searchQuery?: string, estado?: string): Promis
 };
 
 // Crear una nueva factura
-export const createFactura = (facturaInput: CreateFacturaInput) => {
-  const empresaId = getEmpresaActualId(); // OBTENER EMPRESA ID
-    
+export const createFactura = (empresaId: string, facturaInput: CreateFacturaInput) => {
   // Empaquetar los datos para incluir el empresa_id
-  const facturaPayload = { ...facturaInput, empresa_id: empresaId }; // INYECTAR EMPRESA ID (Resuelve Error 2353)
+  const facturaPayload = { ...facturaInput, empresa_id: empresaId };
 
   return databases.createDocument<Factura & Models.Document>(
     DATABASE_ID,
@@ -77,11 +67,9 @@ export const createFactura = (facturaInput: CreateFacturaInput) => {
 };
 
 // Actualizar una factura existente
-export const updateFactura = (id: string, facturaInput: UpdateFacturaInput) => {
-  const empresaId = getEmpresaActualId(); // OBTENER EMPRESA ID
-    
+export const updateFactura = (empresaId: string, id: string, facturaInput: UpdateFacturaInput) => {
   // Empaquetar los datos para incluir el empresa_id
-  const facturaPayload = { ...facturaInput, empresa_id: empresaId }; // INYECTAR EMPRESA ID (Resuelve Error 2353)
+  const facturaPayload = { ...facturaInput, empresa_id: empresaId };
 
   return databases.updateDocument<Factura & Models.Document>(
     DATABASE_ID,

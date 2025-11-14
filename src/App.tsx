@@ -3,6 +3,8 @@ import { HashRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from '@/components/ui/sonner';
 import { AppLayout } from '@/components/layout/AppLayout';
 import LoadingSpinner from './components/LoadingSpinner';
+import { useEmpresa } from '@/contexts/EmpresaContext';
+import { EmpresaSelector } from '@/components/EmpresaSelector';
 
 // Lazy loading de las páginas
 const Dashboard = lazy(() => import('./pages/Dashboard'));
@@ -18,9 +20,15 @@ const MarketingWaha = lazy(() => import('./pages/MarketingWaha'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
 const App = () => {
+  const { empresaActiva, empresasDisponibles, isLoading } = useEmpresa();
+
+  // Mostrar selector si no hay empresa activa y hay múltiples empresas disponibles
+  const mostrarSelector = !isLoading && !empresaActiva && empresasDisponibles.length > 1;
+
   return (
     <>
       <Toaster />
+      <EmpresaSelector open={mostrarSelector} />
       <HashRouter>
         <Suspense
           fallback={

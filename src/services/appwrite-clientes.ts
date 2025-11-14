@@ -3,9 +3,6 @@ import { Cliente, LipooutUserInput, HistorialCita } from '@/types';
 import { ID, Query, Models } from 'appwrite';
 import { generateSearchUnified, filterByAllWords } from '@/utils/search-helpers';
 
-// IMPORTANTE: Asumimos que se inyecta la empresa actual.
-const getEmpresaActualId = () => "ID_EMPRESA_ACTUAL_PLACEHOLDER"; 
-
 // --- Funciones de Serialización para historial_citas ---
 
 /**
@@ -38,15 +35,13 @@ export type UpdateClienteInput = Partial<CreateClienteInput>;
 // --- Funciones de Servicio (Usadas por hooks y otros servicios) ---
 
 // OBTENER Clientes (con búsqueda usando índice fulltext en campo unificado)
-export const getClientesByNombre = async (searchQuery: string = ""): Promise<(Cliente & Models.Document)[]> => {
-    const empresaId = getEmpresaActualId(); // <--- OBTENER EMPRESA ID
-
+export const getClientesByNombre = async (empresaId: string, searchQuery: string = ""): Promise<(Cliente & Models.Document)[]> => {
     // Si no hay búsqueda, devolver los primeros 500
     if (!searchQuery || searchQuery.trim() === "") {
         const response = await databases.listDocuments<Cliente & Models.Document>(
             DATABASE_ID,
             CLIENTES_COLLECTION_ID,
-            [Query.equal('empresa_id', empresaId), Query.limit(500), Query.orderDesc('$createdAt')] // <--- FILTRO
+            [Query.equal('empresa_id', empresaId), Query.limit(500), Query.orderDesc('$createdAt')]
         );
         return response.documents.map(processClienteDocument);
     }
@@ -59,7 +54,7 @@ export const getClientesByNombre = async (searchQuery: string = ""): Promise<(Cl
             DATABASE_ID,
             CLIENTES_COLLECTION_ID,
             [
-                Query.equal('empresa_id', empresaId), // <--- FILTRO
+                Query.equal('empresa_id', empresaId),
                 Query.search('search_unified', searchQuery),
                 Query.limit(500),
                 Query.orderDesc('$createdAt')
@@ -80,12 +75,10 @@ export const getClientesByNombre = async (searchQuery: string = ""): Promise<(Cl
 };
 
 // CREAR Cliente
-export const createCliente = (newCliente: CreateClienteInput) => {
-  const empresaId = getEmpresaActualId(); // <--- OBTENER EMPRESA ID
-  
+export const createCliente = (empresaId: string, newCliente: CreateClienteInput) => {
   const clienteWithSearch = {
     ...newCliente,
-    empresa_id: empresaId, // <--- INYECTAR EMPRESA ID
+    empresa_id: empresaId,
     search_unified: generateSearchUnified(newCliente)
   };
   
@@ -98,13 +91,11 @@ export const createCliente = (newCliente: CreateClienteInput) => {
 };
 
 // ACTUALIZAR Cliente
-export const updateCliente = async ({ $id, data }: { $id: string, data: UpdateClienteInput }) => {
-  const empresaId = getEmpresaActualId(); // <--- OBTENER EMPRESA ID
-
-  // Regenerar search_unified y asegurar empresa_id en los datos (Appwrite lo ignora en update si no se cambia, pero es buena práctica)
+export const updateCliente = async (empresaId: string, { $id, data }: { $id: string, data: UpdateClienteInput }) => {
+  // Regenerar search_unified y asegurar empresa_id
   const dataWithSearch = {
     ...data,
-    empresa_id: empresaId, // <--- INYECTAR EMPRESA ID
+    empresa_id: empresaId,
     search_unified: generateSearchUnified(data)
   };
   
@@ -119,10 +110,18 @@ export const updateCliente = async ({ $id, data }: { $id: string, data: UpdateCl
 };
 
 // ELIMINAR Cliente
-export const deleteCliente = (clienteId: string) => {
-  // NOTA: Se debe confiar en las reglas de Appwrite para la eliminación, 
-  // pero la lógica de la aplicación debe asegurar que el usuario tenga permisos
-  // para la empresa de este cliente.
+export const deleteCliente = async (empresaId: string, clienteId: string) => {
+  // Verificar que el cliente pertenece a la empresa
+  const cliente = await databases.getDocument(
+    DATABASE_ID,
+    CLIENTES_COLLECTION_ID,
+    clienteId
+  );
+  
+  if (cliente.empresa_id !== empresaId) {
+    throw new Error('Cliente no pertenece a la empresa');
+  }
+  
   return databases.deleteDocument(
     DATABASE_ID,
     CLIENTES_COLLECTION_ID,

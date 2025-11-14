@@ -6,12 +6,16 @@ import { PERMISOS_POR_ROL } from '../types/permiso.types';
 /**
  * Obtener permisos de un empleado por su ID
  */
-export async function getPermisosByEmpleado(empleadoId: string): Promise<Permiso | null> {
+export async function getPermisosByEmpleado(empresaId: string, empleadoId: string): Promise<Permiso | null> {
   try {
     const response = await databases.listDocuments(
       DATABASE_ID,
       PERMISOS_COLLECTION_ID,
-      [Query.equal('empleado_id', empleadoId), Query.limit(1)]
+      [
+        Query.equal('empresa_id', empresaId),
+        Query.equal('empleado_id', empleadoId),
+        Query.limit(1)
+      ]
     );
 
     if (response.documents.length === 0) {
@@ -53,12 +57,15 @@ export async function getPermisosByEmpleado(empleadoId: string): Promise<Permiso
 /**
  * Obtener todos los permisos
  */
-export async function getAllPermisos(): Promise<Permiso[]> {
+export async function getAllPermisos(empresaId: string): Promise<Permiso[]> {
   try {
     const response = await databases.listDocuments(
       DATABASE_ID,
       PERMISOS_COLLECTION_ID,
-      [Query.limit(100)]
+      [
+        Query.equal('empresa_id', empresaId),
+        Query.limit(100)
+      ]
     );
 
     return response.documents.map(doc => ({
@@ -95,9 +102,10 @@ export async function getAllPermisos(): Promise<Permiso[]> {
 /**
  * Crear permisos para un empleado
  */
-export async function createPermiso(permiso: PermisoInput): Promise<Permiso> {
+export async function createPermiso(empresaId: string, permiso: PermisoInput): Promise<Permiso> {
   try {
     const data = {
+      empresa_id: empresaId,
       empleado_id: permiso.empleado_id,
       rol: permiso.rol,
       ver_datos_clinicos: permiso.ver_datos_clinicos || false,
@@ -157,7 +165,7 @@ export async function createPermiso(permiso: PermisoInput): Promise<Permiso> {
 /**
  * Actualizar permisos de un empleado
  */
-export async function updatePermiso(id: string, permiso: Partial<PermisoInput>): Promise<Permiso> {
+export async function updatePermiso(empresaId: string, id: string, permiso: Partial<PermisoInput>): Promise<Permiso> {
   try {
     const data: any = {};
     
@@ -218,7 +226,7 @@ export async function updatePermiso(id: string, permiso: Partial<PermisoInput>):
 /**
  * Eliminar permisos de un empleado
  */
-export async function deletePermiso(id: string): Promise<void> {
+export async function deletePermiso(empresaId: string, id: string): Promise<void> {
   try {
     await databases.deleteDocument(
       DATABASE_ID,
@@ -235,6 +243,7 @@ export async function deletePermiso(id: string): Promise<void> {
  * Aplicar permisos por rol predefinido
  */
 export async function aplicarPermisosPorRol(
+  empresaId: string,
   empleadoId: string,
   rol: RolEmpleado
 ): Promise<Permiso> {
@@ -248,14 +257,14 @@ export async function aplicarPermisosPorRol(
     };
     
     // Verificar si ya existen permisos para este empleado
-    const permisosExistentes = await getPermisosByEmpleado(empleadoId);
+    const permisosExistentes = await getPermisosByEmpleado(empresaId, empleadoId);
     
     if (permisosExistentes) {
       // Actualizar permisos existentes
-      return await updatePermiso(permisosExistentes.$id, permisoData);
+      return await updatePermiso(empresaId, permisosExistentes.$id, permisoData);
     } else {
       // Crear nuevos permisos
-      return await createPermiso(permisoData);
+      return await createPermiso(empresaId, permisoData);
     }
   } catch (error) {
     console.error('Error al aplicar permisos por rol:', error);
@@ -267,11 +276,12 @@ export async function aplicarPermisosPorRol(
  * Verificar si un empleado tiene un permiso específico
  */
 export async function verificarPermiso(
+  empresaId: string,
   empleadoId: string,
   permiso: keyof Omit<Permiso, '$id' | 'empleado_id' | 'rol' | '$createdAt' | '$updatedAt' | '$permissions' | '$databaseId' | '$collectionId' | '$sequence'>
 ): Promise<boolean> {
   try {
-    const permisos = await getPermisosByEmpleado(empleadoId);
+    const permisos = await getPermisosByEmpleado(empresaId, empleadoId);
     
     if (!permisos) {
       return false;
@@ -292,9 +302,9 @@ export async function verificarPermiso(
 /**
  * Obtener permisos con información del empleado
  */
-export async function getPermisosConEmpleados(): Promise<Permiso[]> {
+export async function getPermisosConEmpleados(empresaId: string): Promise<Permiso[]> {
   try {
-    const permisos = await getAllPermisos();
+    const permisos = await getAllPermisos(empresaId);
     return permisos;
   } catch (error) {
     console.error('Error al obtener permisos con empleados:', error);

@@ -33,6 +33,7 @@ export interface ArticuloAplicado {
 
 // Tipo para LEER sesiones clínicas desde Appwrite
 export interface SesionClinica extends LipooutDocument {
+  empresa_id: string; // ID de la empresa (multi-tenant)
   cliente_id: string;
   cita_id?: string; // Referencia a la cita si procede
   empleado_id: string; // Quien registró la sesión
@@ -58,6 +59,7 @@ export interface SesionClinica extends LipooutDocument {
 }
 
 // Tipo para CREAR/ACTUALIZAR sesiones
+// NOTA: empresa_id se maneja automáticamente en el servicio, NO se incluye aquí
 export interface SesionClinicaInput {
   cliente_id: string;
   cita_id?: string;

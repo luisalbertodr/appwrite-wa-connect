@@ -10,10 +10,12 @@ export type UpdateNotificacionInput = Partial<CreateNotificacionInput>;
 
 // OBTENER notificaciones por empleado (con filtros opcionales)
 export const getNotificacionesByEmpleado = async (
+  empresaId: string,
   empleadoId: string,
   filtros?: FiltroNotificaciones
 ): Promise<(Notificacion & Models.Document)[]> => {
   const queries = [
+    Query.equal('empresa_id', empresaId),
     Query.orderDesc('fecha_creacion'),
     Query.limit(100)
   ];
@@ -70,22 +72,23 @@ export const getNotificacionesByEmpleado = async (
 };
 
 // OBTENER notificaciones no leídas por empleado
-export const getNotificacionesNoLeidas = async (empleadoId: string): Promise<(Notificacion & Models.Document)[]> => {
-  return getNotificacionesByEmpleado(empleadoId, {
+export const getNotificacionesNoLeidas = async (empresaId: string, empleadoId: string): Promise<(Notificacion & Models.Document)[]> => {
+  return getNotificacionesByEmpleado(empresaId, empleadoId, {
     solo_no_leidas: true,
     solo_activas: true
   });
 };
 
 // CONTAR notificaciones no leídas
-export const contarNotificacionesNoLeidas = async (empleadoId: string): Promise<number> => {
-  const notificaciones = await getNotificacionesNoLeidas(empleadoId);
+export const contarNotificacionesNoLeidas = async (empresaId: string, empleadoId: string): Promise<number> => {
+  const notificaciones = await getNotificacionesNoLeidas(empresaId, empleadoId);
   return notificaciones.length;
 };
 
 // OBTENER todas las notificaciones (admin)
-export const getAllNotificaciones = async (filtros?: FiltroNotificaciones): Promise<(Notificacion & Models.Document)[]> => {
+export const getAllNotificaciones = async (empresaId: string, filtros?: FiltroNotificaciones): Promise<(Notificacion & Models.Document)[]> => {
   const queries = [
+    Query.equal('empresa_id', empresaId),
     Query.orderDesc('fecha_creacion'),
     Query.limit(500)
   ];
@@ -120,7 +123,7 @@ export const getAllNotificaciones = async (filtros?: FiltroNotificaciones): Prom
 };
 
 // CREAR notificación
-export const createNotificacion = (newNotificacion: CreateNotificacionInput) => {
+export const createNotificacion = (empresaId: string, newNotificacion: CreateNotificacionInput) => {
   return databases.createDocument<Notificacion & Models.Document>(
     DATABASE_ID,
     NOTIFICACIONES_COLLECTION_ID,
@@ -131,6 +134,7 @@ export const createNotificacion = (newNotificacion: CreateNotificacionInput) => 
 
 // MARCAR notificación como leída
 export const marcarComoLeida = async (
+  empresaId: string,
   notificacionId: string,
   empleadoId: string
 ): Promise<Notificacion & Models.Document> => {
@@ -173,12 +177,12 @@ export const marcarComoLeida = async (
 };
 
 // MARCAR todas las notificaciones como leídas para un empleado
-export const marcarTodasComoLeidas = async (empleadoId: string): Promise<number> => {
-  const notificaciones = await getNotificacionesNoLeidas(empleadoId);
+export const marcarTodasComoLeidas = async (empresaId: string, empleadoId: string): Promise<number> => {
+  const notificaciones = await getNotificacionesNoLeidas(empresaId, empleadoId);
   
   let contador = 0;
   for (const notificacion of notificaciones) {
-    await marcarComoLeida(notificacion.$id, empleadoId);
+    await marcarComoLeida(empresaId, notificacion.$id, empleadoId);
     contador++;
   }
   
@@ -186,7 +190,7 @@ export const marcarTodasComoLeidas = async (empleadoId: string): Promise<number>
 };
 
 // DESACTIVAR notificación
-export const desactivarNotificacion = (notificacionId: string) => {
+export const desactivarNotificacion = (empresaId: string, notificacionId: string) => {
   return databases.updateDocument<Notificacion & Models.Document>(
     DATABASE_ID,
     NOTIFICACIONES_COLLECTION_ID,
@@ -196,7 +200,7 @@ export const desactivarNotificacion = (notificacionId: string) => {
 };
 
 // ELIMINAR notificación
-export const deleteNotificacion = (notificacionId: string) => {
+export const deleteNotificacion = (empresaId: string, notificacionId: string) => {
   return databases.deleteDocument(
     DATABASE_ID,
     NOTIFICACIONES_COLLECTION_ID,
@@ -205,7 +209,7 @@ export const deleteNotificacion = (notificacionId: string) => {
 };
 
 // LIMPIAR notificaciones antiguas (ejemplo: más de 30 días)
-export const limpiarNotificacionesAntiguas = async (diasAntiguedad: number = 30): Promise<number> => {
+export const limpiarNotificacionesAntiguas = async (empresaId: string, diasAntiguedad: number = 30): Promise<number> => {
   const fechaLimite = new Date();
   fechaLimite.setDate(fechaLimite.getDate() - diasAntiguedad);
   
@@ -213,6 +217,7 @@ export const limpiarNotificacionesAntiguas = async (diasAntiguedad: number = 30)
     DATABASE_ID,
     NOTIFICACIONES_COLLECTION_ID,
     [
+      Query.equal('empresa_id', empresaId),
       Query.lessThan('fecha_creacion', fechaLimite.toISOString()),
       Query.limit(500)
     ]
@@ -220,7 +225,7 @@ export const limpiarNotificacionesAntiguas = async (diasAntiguedad: number = 30)
 
   let contador = 0;
   for (const notificacion of response.documents) {
-    await deleteNotificacion(notificacion.$id);
+    await deleteNotificacion(empresaId, notificacion.$id);
     contador++;
   }
   
@@ -231,6 +236,7 @@ export const limpiarNotificacionesAntiguas = async (diasAntiguedad: number = 30)
 
 // CREAR notificación de bono por vencer
 export const crearNotificacionBonoPorVencer = (
+  empresaId: string,
   clienteId: string,
   clienteNombre: string,
   bonoId: string,
@@ -238,7 +244,8 @@ export const crearNotificacionBonoPorVencer = (
   diasRestantes: number,
   destinatarios: string[]
 ) => {
-  return createNotificacion({
+  return createNotificacion(empresaId, {
+    empresa_id: empresaId,
     tipo: 'bono_por_vencer',
     titulo: 'Bono por vencer',
     mensaje: `El bono "${bonoNombre}" de ${clienteNombre} vence en ${diasRestantes} días`,
@@ -256,12 +263,14 @@ export const crearNotificacionBonoPorVencer = (
 
 // CREAR notificación de cita hoy
 export const crearNotificacionCitaHoy = (
+  empresaId: string,
   citaId: string,
   clienteNombre: string,
   hora: string,
   destinatarios: string[]
 ) => {
-  return createNotificacion({
+  return createNotificacion(empresaId, {
+    empresa_id: empresaId,
     tipo: 'cita_hoy',
     titulo: 'Cita hoy',
     mensaje: `Cita con ${clienteNombre} a las ${hora}`,
@@ -279,12 +288,14 @@ export const crearNotificacionCitaHoy = (
 
 // CREAR notificación de nueva sesión clínica
 export const crearNotificacionNuevaSesion = (
+  empresaId: string,
   sesionId: string,
   clienteNombre: string,
   empleadoNombre: string,
   destinatarios: string[]
 ) => {
-  return createNotificacion({
+  return createNotificacion(empresaId, {
+    empresa_id: empresaId,
     tipo: 'nueva_sesion_clinica',
     titulo: 'Nueva sesión clínica registrada',
     mensaje: `${empleadoNombre} ha registrado una nueva sesión para ${clienteNombre}`,
@@ -301,6 +312,7 @@ export const crearNotificacionNuevaSesion = (
 
 // CREAR notificación genérica
 export const crearNotificacionGenerica = (
+  empresaId: string,
   tipo: TipoNotificacion,
   titulo: string,
   mensaje: string,
@@ -310,7 +322,8 @@ export const crearNotificacionGenerica = (
   referenciaId?: string,
   urlAccion?: string
 ) => {
-  return createNotificacion({
+  return createNotificacion(empresaId, {
+    empresa_id: empresaId,
     tipo,
     titulo,
     mensaje,

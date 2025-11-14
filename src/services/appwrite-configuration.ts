@@ -17,49 +17,52 @@ export type UpdateConfigurationInput = Partial<{
   horarios: HorarioApertura[];
 }>;
 
-// Asumimos que SOLO hay UN documento de configuración
-const CONFIGURATION_DOC_ID = 'singleton'; // O el $id real si ya existe
-
-// Obtener la configuración (asumiendo un único documento)
-export const getConfiguration = async (): Promise<Configuracion & Models.Document> => {
+// Obtener la configuración de una empresa específica
+export const getConfiguration = async (empresaId: string): Promise<Configuracion & Models.Document> => {
   try {
-    // Intentamos obtener por ID conocido
-    const doc = await databases.getDocument<Configuracion & Models.Document>(
+    // Buscar la configuración por empresa_id
+    const response = await databases.listDocuments<Configuracion & Models.Document>(
         DATABASE_ID,
         CONFIGURATION_COLLECTION_ID,
-        CONFIGURATION_DOC_ID
+        [
+          Query.equal('empresa_id', empresaId),
+          Query.limit(1)
+        ]
     );
-    // Deserializar horarios si existe como string
-    if (doc.horarios && typeof doc.horarios === 'string') {
-      doc.horarios = JSON.parse(doc.horarios as any) as HorarioApertura[];
-    }
-    return doc;
-  } catch (error) {
-     // Si falla (ej. no existe), intentamos listarlo
-     console.warn(`No se encontró config con ID '${CONFIGURATION_DOC_ID}', listando...`);
-     const response = await databases.listDocuments<Configuracion & Models.Document>(
-        DATABASE_ID,
-        CONFIGURATION_COLLECTION_ID,
-        [Query.limit(1)]
-     );
-     if (response.documents.length > 0) {
+    
+    if (response.documents.length > 0) {
         const doc = response.documents[0];
         // Deserializar horarios si existe como string
         if (doc.horarios && typeof doc.horarios === 'string') {
-          doc.horarios = JSON.parse(doc.horarios as any) as HorarioApertura[];
+          try {
+            doc.horarios = JSON.parse(doc.horarios as any) as HorarioApertura[];
+          } catch {
+            // Si falla el parse, dejar como array vacío
+            doc.horarios = [];
+          }
         }
         return doc;
-     }
-     throw new Error("No se encontró ningún documento de configuración en la base de datos.");
+    }
+    
+    // No lanzar error, simplemente retornar null o crear configuración por defecto
+    // El componente deberá manejar la ausencia de configuración
+    console.warn(`No se encontró configuración para la empresa ${empresaId}. Se creará una configuración por defecto.`);
+    throw new Error(`No se encontró configuración para la empresa ${empresaId}`);
+  } catch (error) {
+     console.error('Error al obtener configuración:', error);
+     throw error;
   }
 };
 
 // Actualizar la configuración
-export const updateConfiguration = (id: string, data: UpdateConfigurationInput) => {
+export const updateConfiguration = (empresaId: string, id: string, data: UpdateConfigurationInput) => {
   // Serializar horarios a JSON string si existe
-  const dataToSend = { ...data };
+  const dataToSend: any = { 
+    ...data,
+    empresa_id: empresaId
+  };
   if (dataToSend.horarios) {
-    (dataToSend as any).horarios = JSON.stringify(dataToSend.horarios);
+    dataToSend.horarios = JSON.stringify(dataToSend.horarios);
   }
   
   return databases.updateDocument<Configuracion & Models.Document>(

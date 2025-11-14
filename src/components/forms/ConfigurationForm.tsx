@@ -14,7 +14,7 @@ import { Loader2, Upload, Trash2 } from 'lucide-react';
 
 interface ConfigurationFormProps {
   configInicial?: (Configuracion & Models.Document) | null;
-  onSubmit: (data: LipooutUserInput<Configuracion>) => Promise<void>;
+  onSubmit: (data: ConfigurationFormData) => Promise<void>;
   onLogoUpload: (file: File) => Promise<void>; // Nuevo manejador para subir el logo
   isSubmitting: boolean;
   isLoading: boolean;
@@ -90,25 +90,9 @@ export const ConfigurationForm = ({ configInicial, onSubmit, onLogoUpload, isSub
 
 
   const handleSubmit = async (data: ConfigurationFormData) => {
-    // Solo enviamos los datos del formulario, los contadores no se tocan aquí
-    const finalData: LipooutUserInput<Configuracion> = {
-        empresa_id: configInicial?.empresa_id || '',
-        nombreClinica: data.nombreClinica,
-        direccion: data.direccion || '',
-        cif2: data.cif2,
-        emailContacto: data.emailContacto || '',
-        telefonoContacto: data.telefonoContacto || '',
-        serieFactura: data.serieFactura,
-        seriePresupuesto: data.seriePresupuesto,
-        tipoIvaPredeterminado: data.tipoIvaPredeterminado,
-        ultimoNumeroFactura: configInicial?.ultimoNumeroFactura ?? 0,
-        ultimoNumeroPresupuesto: configInicial?.ultimoNumeroPresupuesto ?? 0,
-        horarios: data.horarios,
-        logoUrl: data.logoUrl || '',
-        logoText: data.logoText || 'Lipoout',
-        hideLogoText: data.hideLogoText, // NUEVO
-    };
-    await onSubmit(finalData);
+    // El componente padre agregará empresa_id y los contadores
+    // Aquí solo pasamos los datos del formulario
+    await onSubmit(data);
   };
   
   // Manejador para la selección del archivo de logo
@@ -137,16 +121,12 @@ export const ConfigurationForm = ({ configInicial, onSubmit, onLogoUpload, isSub
   // Manejador para eliminar el logo (simplemente limpiando el campo y guardando)
   const handleLogoRemove = async () => {
     if (configInicial?.logoUrl) {
-        // Clonamos la configuración actual y limpiamos logoUrl
-        const dataToSave: LipooutUserInput<Configuracion> = {
-            ...configInicial,
-            logoUrl: '', // Limpiar la URL del logo
-        };
         // Eliminamos logoUrl del formulario local antes de guardar
         form.setValue('logoUrl', '');
         
-        // Llamamos al onSubmit del padre con el logoUrl limpiado
-        await onSubmit(dataToSave);
+        // Obtenemos los valores actuales del formulario para pasarlos al padre
+        const currentFormData = form.getValues();
+        await onSubmit(currentFormData);
     }
   };
 

@@ -15,6 +15,7 @@ import type {
   EntidadAuditoria 
 } from '@/types/auditoria.types';
 import { useToast } from './use-toast';
+import { useEmpresa } from '@/contexts/EmpresaContext';
 
 const AUDITORIA_QUERY_KEY = 'auditoria';
 
@@ -22,9 +23,15 @@ const AUDITORIA_QUERY_KEY = 'auditoria';
  * Hook para obtener registros de auditoría con filtros
  */
 export const useGetAuditoria = (filtros?: FiltrosAuditoria, limite: number = 100) => {
+  const { empresaActiva } = useEmpresa();
+  
   return useQuery({
-    queryKey: [AUDITORIA_QUERY_KEY, 'list', filtros, limite],
-    queryFn: () => getRegistrosAuditoria(filtros, limite),
+    queryKey: [AUDITORIA_QUERY_KEY, empresaActiva?.$id, 'list', filtros, limite],
+    queryFn: () => {
+      if (!empresaActiva) throw new Error('No hay empresa activa');
+      return getRegistrosAuditoria(empresaActiva.$id, filtros, limite);
+    },
+    enabled: !!empresaActiva,
     staleTime: 1000 * 30, // 30 segundos
   });
 };
@@ -37,10 +44,15 @@ export const useGetHistorialEntidad = (
   entidadId: string,
   enabled: boolean = true
 ) => {
+  const { empresaActiva } = useEmpresa();
+  
   return useQuery({
-    queryKey: [AUDITORIA_QUERY_KEY, 'historial', entidadTipo, entidadId],
-    queryFn: () => getHistorialEntidad(entidadTipo, entidadId),
-    enabled: enabled && !!entidadId,
+    queryKey: [AUDITORIA_QUERY_KEY, empresaActiva?.$id, 'historial', entidadTipo, entidadId],
+    queryFn: () => {
+      if (!empresaActiva) throw new Error('No hay empresa activa');
+      return getHistorialEntidad(empresaActiva.$id, entidadTipo, entidadId);
+    },
+    enabled: enabled && !!entidadId && !!empresaActiva,
     staleTime: 1000 * 60, // 1 minuto
   });
 };
@@ -53,10 +65,15 @@ export const useGetActividadUsuario = (
   fechaDesde?: string,
   fechaHasta?: string
 ) => {
+  const { empresaActiva } = useEmpresa();
+  
   return useQuery({
-    queryKey: [AUDITORIA_QUERY_KEY, 'usuario', usuarioId, fechaDesde, fechaHasta],
-    queryFn: () => getActividadUsuario(usuarioId, fechaDesde, fechaHasta),
-    enabled: !!usuarioId,
+    queryKey: [AUDITORIA_QUERY_KEY, empresaActiva?.$id, 'usuario', usuarioId, fechaDesde, fechaHasta],
+    queryFn: () => {
+      if (!empresaActiva) throw new Error('No hay empresa activa');
+      return getActividadUsuario(empresaActiva.$id, usuarioId, fechaDesde, fechaHasta);
+    },
+    enabled: !!usuarioId && !!empresaActiva,
     staleTime: 1000 * 60, // 1 minuto
   });
 };
@@ -65,9 +82,15 @@ export const useGetActividadUsuario = (
  * Hook para obtener estadísticas de auditoría
  */
 export const useGetEstadisticasAuditoria = (fechaDesde?: string, fechaHasta?: string) => {
+  const { empresaActiva } = useEmpresa();
+  
   return useQuery({
-    queryKey: [AUDITORIA_QUERY_KEY, 'estadisticas', fechaDesde, fechaHasta],
-    queryFn: () => getEstadisticasAuditoria(fechaDesde, fechaHasta),
+    queryKey: [AUDITORIA_QUERY_KEY, empresaActiva?.$id, 'estadisticas', fechaDesde, fechaHasta],
+    queryFn: () => {
+      if (!empresaActiva) throw new Error('No hay empresa activa');
+      return getEstadisticasAuditoria(empresaActiva.$id, fechaDesde, fechaHasta);
+    },
+    enabled: !!empresaActiva,
     staleTime: 1000 * 60 * 5, // 5 minutos
   });
 };
@@ -78,9 +101,13 @@ export const useGetEstadisticasAuditoria = (fechaDesde?: string, fechaHasta?: st
 export const useCrearAuditoria = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
+  const { empresaActiva } = useEmpresa();
 
   return useMutation({
-    mutationFn: (registro: RegistroAuditoriaInput) => crearRegistroAuditoria(registro),
+    mutationFn: (registro: RegistroAuditoriaInput) => {
+      if (!empresaActiva) throw new Error('No hay empresa activa');
+      return crearRegistroAuditoria(empresaActiva.$id, registro);
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [AUDITORIA_QUERY_KEY] });
     },
@@ -99,6 +126,7 @@ export const useCrearAuditoria = () => {
  */
 export const useAuditarCreacion = () => {
   const queryClient = useQueryClient();
+  const { empresaActiva } = useEmpresa();
 
   return useMutation({
     mutationFn: async ({
@@ -120,7 +148,9 @@ export const useAuditarCreacion = () => {
       modulo: string;
       descripcion?: string;
     }) => {
+      if (!empresaActiva) throw new Error('No hay empresa activa');
       return auditarCreacion(
+        empresaActiva.$id,
         entidadTipo,
         entidadId,
         datosNuevos,
@@ -142,6 +172,7 @@ export const useAuditarCreacion = () => {
  */
 export const useAuditarActualizacion = () => {
   const queryClient = useQueryClient();
+  const { empresaActiva } = useEmpresa();
 
   return useMutation({
     mutationFn: async ({
@@ -165,7 +196,9 @@ export const useAuditarActualizacion = () => {
       modulo: string;
       descripcion?: string;
     }) => {
+      if (!empresaActiva) throw new Error('No hay empresa activa');
       return auditarActualizacion(
+        empresaActiva.$id,
         entidadTipo,
         entidadId,
         datosAnteriores,
@@ -188,6 +221,7 @@ export const useAuditarActualizacion = () => {
  */
 export const useAuditarEliminacion = () => {
   const queryClient = useQueryClient();
+  const { empresaActiva } = useEmpresa();
 
   return useMutation({
     mutationFn: async ({
@@ -209,7 +243,9 @@ export const useAuditarEliminacion = () => {
       modulo: string;
       descripcion?: string;
     }) => {
+      if (!empresaActiva) throw new Error('No hay empresa activa');
       return auditarEliminacion(
+        empresaActiva.$id,
         entidadTipo,
         entidadId,
         datosAnteriores,

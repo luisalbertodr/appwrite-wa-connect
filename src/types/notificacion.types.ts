@@ -17,6 +17,7 @@ export type PrioridadNotificacion = 'alta' | 'media' | 'baja';
 
 // Tipo para LEER notificaciones desde Appwrite
 export interface Notificacion extends LipooutDocument {
+  empresa_id: string; // ID de la empresa (multi-tenant)
   tipo: TipoNotificacion;
   titulo: string;
   mensaje: string;
@@ -43,6 +44,7 @@ export interface Notificacion extends LipooutDocument {
 
 // Tipo para CREAR notificaciones
 export interface NotificacionInput {
+  empresa_id: string; // ID de la empresa (multi-tenant)
   tipo: TipoNotificacion;
   titulo: string;
   mensaje: string;

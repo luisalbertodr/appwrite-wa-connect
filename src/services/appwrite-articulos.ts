@@ -2,12 +2,6 @@ import { databases, DATABASE_ID, ARTICULOS_COLLECTION_ID, FAMILIAS_COLLECTION_ID
 import { Articulo, ArticuloInput, Familia, LipooutUserInput } from '@/types'; // Import LipooutUserInput
 import { ID, Query, Models } from 'appwrite';
 
-// =========================================================================
-// CAMBIO MULTIEMPRESA: OBTENER CONTEXTO DE EMPRESA (Placeholder)
-// =========================================================================
-// NOTA: Reemplazar por la obtención real del ID de la empresa de la sesión.
-const getEmpresaActualId = () => "ID_EMPRESA_ACTUAL_PLACEHOLDER"; 
-
 // --- API de Familias ---
 
 // Tipo Input para formularios (sin empresa_id, se inyecta en el servicio)
@@ -16,21 +10,17 @@ export type FamiliaInput = Omit<LipooutUserInput<Familia>, 'empresa_id'>;
 type FamiliaPayload = FamiliaInput & { empresa_id: string };
 
 
-export const getFamilias = async (): Promise<(Familia & Models.Document)[]> => {
-  const empresaId = getEmpresaActualId(); // OBTENER EMPRESA ID
-    
+export const getFamilias = async (empresaId: string): Promise<(Familia & Models.Document)[]> => {
   const response = await databases.listDocuments<Familia & Models.Document>(
     DATABASE_ID,
     FAMILIAS_COLLECTION_ID,
-    [Query.equal('empresa_id', empresaId), Query.limit(100)] // FILTRO MULTIEMPRESA
+    [Query.equal('empresa_id', empresaId), Query.limit(100)]
   );
   return response.documents;
 };
 
 // (NUEVO)
-export const createFamilia = (familiaInput: FamiliaInput) => {
-    const empresaId = getEmpresaActualId(); // OBTENER EMPRESA ID
-    
+export const createFamilia = (empresaId: string, familiaInput: FamiliaInput) => {
     // El payload incluye la empresa_id
     const familiaPayload: FamiliaPayload = {
         ...familiaInput,
@@ -46,9 +36,7 @@ export const createFamilia = (familiaInput: FamiliaInput) => {
 };
 
 // (NUEVO)
-export const updateFamilia = (id: string, familiaInput: Partial<FamiliaInput>) => {
-    const empresaId = getEmpresaActualId(); // OBTENER EMPRESA ID
-    
+export const updateFamilia = (empresaId: string, id: string, familiaInput: Partial<FamiliaInput>) => {
     // El payload incluye la empresa_id
     const familiaPayload: Partial<FamiliaPayload> = {
         ...familiaInput,
@@ -83,10 +71,8 @@ export type UpdateArticuloInput = Partial<CreateArticuloInput>;
 type ArticuloPayload = CreateArticuloInput & { empresa_id: string };
 
 
-export const getArticulos = async (familiaId?: string): Promise<(Articulo & Models.Document)[]> => {
-  const empresaId = getEmpresaActualId(); // OBTENER EMPRESA ID
-
-  const queries = [Query.equal('empresa_id', empresaId), Query.limit(100)]; // FILTRO MULTIEMPRESA
+export const getArticulos = async (empresaId: string, familiaId?: string): Promise<(Articulo & Models.Document)[]> => {
+  const queries = [Query.equal('empresa_id', empresaId), Query.limit(100)];
   if (familiaId) {
     queries.push(Query.equal('familia_id', familiaId));
   }
@@ -98,7 +84,7 @@ export const getArticulos = async (familiaId?: string): Promise<(Articulo & Mode
   );
 
   // --- Workaround para "poblar" la familia ---
-  const familias = await getFamilias();
+  const familias = await getFamilias(empresaId);
   const familiaMap = new Map(familias.map(f => [f.$id, f]));
 
   return response.documents.map(articulo => ({
@@ -107,13 +93,11 @@ export const getArticulos = async (familiaId?: string): Promise<(Articulo & Mode
   }));
 };
 
-export const createArticulo = (articuloInput: CreateArticuloInput) => {
-   const empresaId = getEmpresaActualId(); // OBTENER EMPRESA ID
-   
+export const createArticulo = (empresaId: string, articuloInput: CreateArticuloInput) => {
    // Esto ahora es correcto porque Articulo ya no requiere 'familia'
    const articuloPayload: ArticuloPayload = {
      ...articuloInput,
-     empresa_id: empresaId, // INYECTAR EMPRESA ID
+     empresa_id: empresaId,
    };
 
    // Limpiar campos undefined antes de enviar
@@ -131,13 +115,11 @@ export const createArticulo = (articuloInput: CreateArticuloInput) => {
   ) as Promise<Articulo & Models.Document>;
 };
 
-export const updateArticulo = (id: string, articuloInput: UpdateArticuloInput) => {
-   const empresaId = getEmpresaActualId(); // OBTENER EMPRESA ID
-
+export const updateArticulo = (empresaId: string, id: string, articuloInput: UpdateArticuloInput) => {
    // El payload incluye la empresa_id
    const articuloPayload: Partial<ArticuloPayload> = {
         ...articuloInput,
-        empresa_id: empresaId // INYECTAR EMPRESA ID
+        empresa_id: empresaId
     };
 
    // Limpiar campos undefined para evitar errores en Appwrite

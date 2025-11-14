@@ -6,14 +6,21 @@ import { Models } from 'appwrite';
 import { parseISO, addMinutes } from 'date-fns';
 import { useGetEmpleados } from './useEmpleados';
 import { useGetClientes } from './useClientes';
+import { useEmpresa } from '@/contexts/EmpresaContext';
 
 const CALENDAR_QUERY_KEY = 'calendar-citas';
 
 // Hook para obtener citas por rango de fechas
 export const useGetCitasPorRango = (fechaInicio: Date, fechaFin: Date, empleadoId?: string) => {
+  const { empresaActiva } = useEmpresa();
+  
   return useQuery({
-    queryKey: [CALENDAR_QUERY_KEY, fechaInicio.toISOString(), fechaFin.toISOString(), empleadoId],
-    queryFn: () => getCitasPorRango(fechaInicio, fechaFin, empleadoId),
+    queryKey: [CALENDAR_QUERY_KEY, empresaActiva?.$id, fechaInicio.toISOString(), fechaFin.toISOString(), empleadoId],
+    queryFn: () => {
+      if (!empresaActiva) throw new Error('No hay empresa activa');
+      return getCitasPorRango(empresaActiva.$id, fechaInicio, fechaFin, empleadoId);
+    },
+    enabled: !!empresaActiva,
     staleTime: 1000 * 60, // 1 minuto
   });
 };

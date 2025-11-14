@@ -1,19 +1,19 @@
 import { databases, storage, DATABASE_ID, SESIONES_CLINICAS_COLLECTION_ID, DOCUMENTOS_FIRMADOS_BUCKET_ID, FOTOS_SESIONES_BUCKET_ID } from '@/lib/appwrite';
-import { SesionClinica, LipooutUserInput } from '@/types';
+import { SesionClinica, SesionClinicaInput } from '@/types';
 import { ID, Query, Models } from 'appwrite';
 
 // Tipos Input
-export type CreateSesionClinicaInput = LipooutUserInput<SesionClinica>;
-export type UpdateSesionClinicaInput = Partial<CreateSesionClinicaInput>;
+export type UpdateSesionClinicaInput = Partial<SesionClinicaInput>;
 
 // --- Funciones de Servicio ---
 
 // OBTENER sesiones por cliente
-export const getSesionesByCliente = async (clienteId: string): Promise<(SesionClinica & Models.Document)[]> => {
+export const getSesionesByCliente = async (empresaId: string, clienteId: string): Promise<(SesionClinica & Models.Document)[]> => {
   const response = await databases.listDocuments<SesionClinica & Models.Document>(
     DATABASE_ID,
     SESIONES_CLINICAS_COLLECTION_ID,
     [
+      Query.equal('empresa_id', empresaId),
       Query.equal('cliente_id', clienteId),
       Query.orderDesc('fecha_sesion'),
       Query.limit(100)
@@ -23,11 +23,12 @@ export const getSesionesByCliente = async (clienteId: string): Promise<(SesionCl
 };
 
 // OBTENER sesiones por empleado
-export const getSesionesByEmpleado = async (empleadoId: string): Promise<(SesionClinica & Models.Document)[]> => {
+export const getSesionesByEmpleado = async (empresaId: string, empleadoId: string): Promise<(SesionClinica & Models.Document)[]> => {
   const response = await databases.listDocuments<SesionClinica & Models.Document>(
     DATABASE_ID,
     SESIONES_CLINICAS_COLLECTION_ID,
     [
+      Query.equal('empresa_id', empresaId),
       Query.equal('empleado_id', empleadoId),
       Query.orderDesc('fecha_sesion'),
       Query.limit(100)
@@ -37,11 +38,12 @@ export const getSesionesByEmpleado = async (empleadoId: string): Promise<(Sesion
 };
 
 // OBTENER sesión por cita
-export const getSesionByCita = async (citaId: string): Promise<(SesionClinica & Models.Document) | null> => {
+export const getSesionByCita = async (empresaId: string, citaId: string): Promise<(SesionClinica & Models.Document) | null> => {
   const response = await databases.listDocuments<SesionClinica & Models.Document>(
     DATABASE_ID,
     SESIONES_CLINICAS_COLLECTION_ID,
     [
+      Query.equal('empresa_id', empresaId),
       Query.equal('cita_id', citaId),
       Query.limit(1)
     ]
@@ -50,11 +52,12 @@ export const getSesionByCita = async (citaId: string): Promise<(SesionClinica & 
 };
 
 // OBTENER sesiones visibles para cliente (para portal de cliente futuro)
-export const getSesionesVisiblesCliente = async (clienteId: string): Promise<(SesionClinica & Models.Document)[]> => {
+export const getSesionesVisiblesCliente = async (empresaId: string, clienteId: string): Promise<(SesionClinica & Models.Document)[]> => {
   const response = await databases.listDocuments<SesionClinica & Models.Document>(
     DATABASE_ID,
     SESIONES_CLINICAS_COLLECTION_ID,
     [
+      Query.equal('empresa_id', empresaId),
       Query.equal('cliente_id', clienteId),
       Query.equal('visible_para_cliente', true),
       Query.orderDesc('fecha_sesion'),
@@ -65,17 +68,31 @@ export const getSesionesVisiblesCliente = async (clienteId: string): Promise<(Se
 };
 
 // CREAR sesión clínica
-export const createSesionClinica = (newSesion: CreateSesionClinicaInput) => {
+export const createSesionClinica = (empresaId: string, newSesion: SesionClinicaInput) => {
   return databases.createDocument<SesionClinica & Models.Document>(
     DATABASE_ID,
     SESIONES_CLINICAS_COLLECTION_ID,
     ID.unique(),
-    newSesion
+    {
+      empresa_id: empresaId,
+      ...newSesion
+    }
   );
 };
 
 // ACTUALIZAR sesión clínica
-export const updateSesionClinica = ({ $id, data }: { $id: string, data: UpdateSesionClinicaInput }) => {
+export const updateSesionClinica = async (empresaId: string, { $id, data }: { $id: string, data: UpdateSesionClinicaInput }) => {
+  // Verificar que la sesión pertenece a la empresa
+  const sesion = await databases.getDocument(
+    DATABASE_ID,
+    SESIONES_CLINICAS_COLLECTION_ID,
+    $id
+  );
+  
+  if (sesion.empresa_id !== empresaId) {
+    throw new Error('Sesión no pertenece a la empresa');
+  }
+
   return databases.updateDocument<SesionClinica & Models.Document>(
     DATABASE_ID,
     SESIONES_CLINICAS_COLLECTION_ID,
@@ -85,7 +102,18 @@ export const updateSesionClinica = ({ $id, data }: { $id: string, data: UpdateSe
 };
 
 // ELIMINAR sesión clínica
-export const deleteSesionClinica = (sesionId: string) => {
+export const deleteSesionClinica = async (empresaId: string, sesionId: string) => {
+  // Verificar que la sesión pertenece a la empresa
+  const sesion = await databases.getDocument(
+    DATABASE_ID,
+    SESIONES_CLINICAS_COLLECTION_ID,
+    sesionId
+  );
+  
+  if (sesion.empresa_id !== empresaId) {
+    throw new Error('Sesión no pertenece a la empresa');
+  }
+
   return databases.deleteDocument(
     DATABASE_ID,
     SESIONES_CLINICAS_COLLECTION_ID,
@@ -158,8 +186,8 @@ export const deleteFotoSesion = (fileId: string) => {
 // --- Funciones de Análisis ---
 
 // OBTENER estadísticas de sesiones de un cliente
-export const getEstadisticasSesiones = async (clienteId: string) => {
-  const sesiones = await getSesionesByCliente(clienteId);
+export const getEstadisticasSesiones = async (empresaId: string, clienteId: string) => {
+  const sesiones = await getSesionesByCliente(empresaId, clienteId);
   
   const totalSesiones = sesiones.length;
   const sesionesConDocumentos = sesiones.filter(s => {
@@ -220,11 +248,13 @@ export const getEstadisticasSesiones = async (clienteId: string) => {
 
 // BUSCAR sesiones por rango de fechas
 export const getSesionesByRangoFechas = async (
+  empresaId: string,
   fechaInicio: string,
   fechaFin: string,
   empleadoId?: string
 ): Promise<(SesionClinica & Models.Document)[]> => {
   const queries = [
+    Query.equal('empresa_id', empresaId),
     Query.greaterThanEqual('fecha_sesion', fechaInicio),
     Query.lessThanEqual('fecha_sesion', fechaFin),
     Query.orderDesc('fecha_sesion'),

@@ -8,13 +8,16 @@ export const AUDITORIA_COLLECTION_ID = 'auditoria';
 /**
  * Crear un registro de auditoría
  */
-export async function crearRegistroAuditoria(registro: RegistroAuditoriaInput): Promise<RegistroAuditoria> {
+export async function crearRegistroAuditoria(empresaId: string, registro: RegistroAuditoriaInput): Promise<RegistroAuditoria> {
   try {
     const response = await databases.createDocument(
       DATABASE_ID,
       AUDITORIA_COLLECTION_ID,
       ID.unique(),
-      registro
+      {
+        ...registro,
+        empresa_id: empresaId
+      }
     );
 
     return response as unknown as RegistroAuditoria;
@@ -28,12 +31,14 @@ export async function crearRegistroAuditoria(registro: RegistroAuditoriaInput): 
  * Obtener registros de auditoría con filtros
  */
 export async function getRegistrosAuditoria(
+  empresaId: string,
   filtros?: FiltrosAuditoria,
   limite: number = 100,
   offset: number = 0
 ): Promise<RegistroAuditoria[]> {
   try {
     const queries: string[] = [
+      Query.equal('empresa_id', empresaId),
       Query.limit(limite),
       Query.offset(offset),
       Query.orderDesc('fecha_accion')
@@ -88,11 +93,13 @@ export async function getRegistrosAuditoria(
  * Obtener historial de una entidad específica
  */
 export async function getHistorialEntidad(
+  empresaId: string,
   entidadTipo: EntidadAuditoria,
   entidadId: string,
   limite: number = 50
 ): Promise<RegistroAuditoria[]> {
   return getRegistrosAuditoria(
+    empresaId,
     { entidad_tipo: entidadTipo, entidad_id: entidadId },
     limite
   );
@@ -102,12 +109,14 @@ export async function getHistorialEntidad(
  * Obtener actividad de un usuario
  */
 export async function getActividadUsuario(
+  empresaId: string,
   usuarioId: string,
   fechaDesde?: string,
   fechaHasta?: string,
   limite: number = 100
 ): Promise<RegistroAuditoria[]> {
   return getRegistrosAuditoria(
+    empresaId,
     { usuario_id: usuarioId, fecha_desde: fechaDesde, fecha_hasta: fechaHasta },
     limite
   );
@@ -117,11 +126,13 @@ export async function getActividadUsuario(
  * Obtener estadísticas de auditoría
  */
 export async function getEstadisticasAuditoria(
+  empresaId: string,
   fechaDesde?: string,
   fechaHasta?: string
 ): Promise<EstadisticasAuditoria> {
   try {
     const registros = await getRegistrosAuditoria(
+      empresaId,
       { fecha_desde: fechaDesde, fecha_hasta: fechaHasta },
       1000 // Límite para estadísticas
     );
@@ -177,6 +188,7 @@ export async function getEstadisticasAuditoria(
  * Helper: Auditar creación de entidad
  */
 export async function auditarCreacion(
+  empresaId: string,
   entidadTipo: EntidadAuditoria,
   entidadId: string,
   datosNuevos: any,
@@ -201,13 +213,14 @@ export async function auditarCreacion(
     user_agent: navigator.userAgent
   };
 
-  await crearRegistroAuditoria(registro);
+  await crearRegistroAuditoria(empresaId, registro);
 }
 
 /**
  * Helper: Auditar actualización de entidad
  */
 export async function auditarActualizacion(
+  empresaId: string,
   entidadTipo: EntidadAuditoria,
   entidadId: string,
   datosAnteriores: any,
@@ -234,13 +247,14 @@ export async function auditarActualizacion(
     user_agent: navigator.userAgent
   };
 
-  await crearRegistroAuditoria(registro);
+  await crearRegistroAuditoria(empresaId, registro);
 }
 
 /**
  * Helper: Auditar eliminación de entidad
  */
 export async function auditarEliminacion(
+  empresaId: string,
   entidadTipo: EntidadAuditoria,
   entidadId: string,
   datosAnteriores: any,
@@ -265,7 +279,7 @@ export async function auditarEliminacion(
     user_agent: navigator.userAgent
   };
 
-  await crearRegistroAuditoria(registro);
+  await crearRegistroAuditoria(empresaId, registro);
 }
 
 /**

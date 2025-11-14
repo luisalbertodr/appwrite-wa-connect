@@ -241,8 +241,11 @@ module.exports = async ({ req, res, log, error }) => {
                 // CÁLCULO Y ASIGNACIÓN DE search_unified INLINE
                 clientToSave.search_unified = generateSearchUnified(clientToSave);
                 
-                // MULTIEMPRESA: Determinar empresa_id (payload > env)
-                let empresaId = process.env.APPWRITE_EMPRESA_ID;
+                // MULTIEMPRESA: Determinar empresa_id
+                // Orden de prioridad: 1) payload, 2) consultar empleados con user_id, 3) env
+                let empresaId = null;
+                
+                // 1. Intentar obtener de payload
                 try {
                     const raw = req.body || req.payload;
                     if (raw) {
@@ -252,8 +255,34 @@ module.exports = async ({ req, res, log, error }) => {
                 } catch (e) {
                     // Ignorar errores de parseo
                 }
+                
+                // 2. Si no hay en payload, intentar obtener del usuario autenticado via empleados
                 if (!empresaId) {
-                    const msg = 'empresa_id no configurado (env APPWRITE_EMPRESA_ID o payload.empresa_id).';
+                    try {
+                        const userId = req.headers['x-appwrite-user-id'];
+                        if (userId) {
+                            const empleadosResponse = await databases.listDocuments(
+                                DATABASE_ID,
+                                'empleados',
+                                [Query.equal('user_id', userId), Query.limit(1)]
+                            );
+                            if (empleadosResponse.documents.length > 0) {
+                                empresaId = empleadosResponse.documents[0].empresa_id;
+                                log(`empresa_id obtenido del empleado: ${empresaId}`);
+                            }
+                        }
+                    } catch (empleadoErr) {
+                        log(`No se pudo obtener empresa_id del empleado: ${empleadoErr.message}`);
+                    }
+                }
+                
+                // 3. Fallback a variable de entorno
+                if (!empresaId) {
+                    empresaId = process.env.APPWRITE_EMPRESA_ID;
+                }
+                
+                if (!empresaId) {
+                    const msg = 'empresa_id no configurado (payload, empleado o env APPWRITE_EMPRESA_ID).';
                     error(msg);
                     addIssue(importErrors, `Error de configuración: ${msg}`, rowNumber, newClientRecord.codcli);
                     detailedImportResults.push({ codcli: newClientRecord.codcli, nombre: nombreCompleto, status: 'ERROR', message: msg });

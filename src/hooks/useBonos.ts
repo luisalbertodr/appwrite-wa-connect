@@ -15,8 +15,10 @@ import {
   UpdateBonoClienteInput
 } from '../services/appwrite-bonos';
 import type { BonoCliente } from '../types/bono.types';
+import { useEmpresa } from '@/contexts/EmpresaContext';
 
 export function useBonos(clienteId?: string) {
+  const { empresaActiva } = useEmpresa();
   const [bonos, setBonos] = useState<BonoCliente[]>([]);
   const [bonosDisponibles, setBonosDisponibles] = useState<BonoCliente[]>([]);
   const [loading, setLoading] = useState(false);
@@ -24,16 +26,16 @@ export function useBonos(clienteId?: string) {
 
   // Cargar bonos del cliente
   const loadBonos = useCallback(async () => {
-    if (!clienteId) return;
+    if (!clienteId || !empresaActiva) return;
 
     setLoading(true);
     setError(null);
     try {
-      const data = await getBonosByCliente(clienteId);
+      const data = await getBonosByCliente(empresaActiva.$id, clienteId);
       setBonos(data);
       
       // Cargar también bonos disponibles
-      const disponibles = await getBonosDisponibles(clienteId);
+      const disponibles = await getBonosDisponibles(empresaActiva.$id, clienteId);
       setBonosDisponibles(disponibles);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Error al cargar bonos');
@@ -41,45 +43,47 @@ export function useBonos(clienteId?: string) {
     } finally {
       setLoading(false);
     }
-  }, [clienteId]);
+  }, [clienteId, empresaActiva]);
 
   // Cargar bonos al montar el componente o cambiar clienteId
   useEffect(() => {
-    if (clienteId) {
+    if (clienteId && empresaActiva) {
       loadBonos();
     }
-  }, [clienteId, loadBonos]);
+  }, [clienteId, empresaActiva, loadBonos]);
 
   // Verificar si un artículo está disponible en bonos
   const verificarArticuloDisponible = useCallback(async (articuloId: string) => {
-    if (!clienteId) return null;
+    if (!clienteId || !empresaActiva) return null;
 
     try {
-      return await verificarArticuloEnBonos(clienteId, articuloId);
+      return await verificarArticuloEnBonos(empresaActiva.$id, clienteId, articuloId);
     } catch (err) {
       console.error('Error al verificar artículo en bonos:', err);
       return null;
     }
-  }, [clienteId]);
+  }, [clienteId, empresaActiva]);
 
   // Obtener bonos disponibles para un artículo específico
   const getBonosParaArticulo = useCallback(async (articuloId: string) => {
-    if (!clienteId) return [];
+    if (!clienteId || !empresaActiva) return [];
 
     try {
-      return await getBonosDisponiblesParaArticulo(clienteId, articuloId);
+      return await getBonosDisponiblesParaArticulo(empresaActiva.$id, clienteId, articuloId);
     } catch (err) {
       console.error('Error al obtener bonos para artículo:', err);
       return [];
     }
-  }, [clienteId]);
+  }, [clienteId, empresaActiva]);
 
   // Crear nuevo bono (el servicio inyecta empresa_id automáticamente)
   const createBono = useCallback(async (bono: CreateBonoClienteInput) => {
+    if (!empresaActiva) throw new Error('No hay empresa activa');
+    
     setLoading(true);
     setError(null);
     try {
-      const nuevoBono = await createBonoCliente(bono);
+      const nuevoBono = await createBonoCliente(empresaActiva.$id, bono);
       await loadBonos();
       return nuevoBono;
     } catch (err) {
@@ -90,14 +94,16 @@ export function useBonos(clienteId?: string) {
     } finally {
       setLoading(false);
     }
-  }, [loadBonos]);
+  }, [loadBonos, empresaActiva]);
 
   // Actualizar bono
   const updateBono = useCallback(async (id: string, bono: UpdateBonoClienteInput) => {
+    if (!empresaActiva) throw new Error('No hay empresa activa');
+    
     setLoading(true);
     setError(null);
     try {
-      const bonoActualizado = await updateBonoCliente({ $id: id, data: bono });
+      const bonoActualizado = await updateBonoCliente(empresaActiva.$id, { $id: id, data: bono });
       await loadBonos();
       return bonoActualizado;
     } catch (err) {
@@ -108,14 +114,16 @@ export function useBonos(clienteId?: string) {
     } finally {
       setLoading(false);
     }
-  }, [loadBonos]);
+  }, [loadBonos, empresaActiva]);
 
   // Consumir bono (usar un artículo del bono)
   const usarBono = useCallback(async (bonoId: string, articuloId: string, cantidad: number = 1) => {
+    if (!empresaActiva) throw new Error('No hay empresa activa');
+    
     setLoading(true);
     setError(null);
     try {
-      const bonoActualizado = await consumirBono(bonoId, articuloId, cantidad);
+      const bonoActualizado = await consumirBono(empresaActiva.$id, bonoId, articuloId, cantidad);
       await loadBonos();
       return bonoActualizado;
     } catch (err) {
@@ -126,27 +134,27 @@ export function useBonos(clienteId?: string) {
     } finally {
       setLoading(false);
     }
-  }, [loadBonos]);
+  }, [loadBonos, empresaActiva]);
 
   // Verificar expiración de bonos
   const verificarExpiracion = useCallback(async () => {
-    if (!clienteId) return [];
+    if (!clienteId || !empresaActiva) return [];
 
     try {
-      return await verificarExpiracionBonos(clienteId);
+      return await verificarExpiracionBonos(empresaActiva.$id, clienteId);
     } catch (err) {
       console.error('Error al verificar expiración de bonos:', err);
       return [];
     }
-  }, [clienteId]);
+  }, [clienteId, empresaActiva]);
 
   // Desactivar bonos expirados
   const desactivarExpirados = useCallback(async () => {
-    if (!clienteId) return 0;
+    if (!empresaActiva) return 0;
 
     setLoading(true);
     try {
-      const cantidad = await desactivarBonosExpirados();
+      const cantidad = await desactivarBonosExpirados(empresaActiva.$id);
       await loadBonos();
       return cantidad;
     } catch (err) {
@@ -155,7 +163,7 @@ export function useBonos(clienteId?: string) {
     } finally {
       setLoading(false);
     }
-  }, [clienteId, loadBonos]);
+  }, [empresaActiva, loadBonos]);
 
   // Eliminar bono
   const deleteBono = useCallback(async (id: string) => {
@@ -176,15 +184,15 @@ export function useBonos(clienteId?: string) {
 
   // Obtener estadísticas de bonos
   const getEstadisticas = useCallback(async () => {
-    if (!clienteId) return null;
+    if (!clienteId || !empresaActiva) return null;
 
     try {
-      return await getEstadisticasBonos(clienteId);
+      return await getEstadisticasBonos(empresaActiva.$id, clienteId);
     } catch (err) {
       console.error('Error al obtener estadísticas de bonos:', err);
       return null;
     }
-  }, [clienteId]);
+  }, [clienteId, empresaActiva]);
 
   return {
     bonos,

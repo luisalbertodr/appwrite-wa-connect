@@ -8,12 +8,14 @@ import {
 } from '../services/appwrite-agenda'; // Asumiendo que las funciones CRUD están aquí
 import { CitaInput, LipooutUserInput } from '@/types'; // Asegúrate de importar los tipos necesarios
 import { format, startOfDay, startOfWeek } from 'date-fns'; // Importar date-fns
+import { useEmpresa } from '@/contexts/EmpresaContext';
 
 // --- CLAVE BASE PARA LAS QUERIES DE CITAS ---
 export const CITAS_QUERY_KEY = 'citas';
 
 // --- HOOK PARA OBTENER CITAS POR DÍA (CON FECHA EN LA KEY) ---
 export const useGetCitasPorDia = (fecha: Date | undefined) => {
+  const { empresaActiva } = useEmpresa();
   // Asegurarse de tener una fecha válida, usar Date() como fallback si es undefined
   const fechaValida = fecha || new Date();
   // Crear una clave única para cada día para el caché
@@ -21,8 +23,12 @@ export const useGetCitasPorDia = (fecha: Date | undefined) => {
 
   return useQuery({
     // La queryKey ahora incluye la fecha específica
-    queryKey: [CITAS_QUERY_KEY, fechaKey],
-    queryFn: () => getCitasPorDia(fechaValida), // Llama a la función del servicio con fecha válida
+    queryKey: [CITAS_QUERY_KEY, empresaActiva?.$id, fechaKey],
+    queryFn: () => {
+      if (!empresaActiva) throw new Error('No hay empresa activa');
+      return getCitasPorDia(empresaActiva.$id, fechaValida);
+    },
+    enabled: !!empresaActiva,
     // Opciones adicionales (ej. staleTime) pueden ir aquí
     staleTime: 1000 * 60 * 5, // Cache por 5 minutos, por ejemplo
     // Habilitar refetch al montar o si la ventana recupera el foco puede ser útil
@@ -33,13 +39,18 @@ export const useGetCitasPorDia = (fecha: Date | undefined) => {
 
 // --- HOOK PARA OBTENER CITAS POR SEMANA (LUNES A SÁBADO) ---
 export const useGetCitasPorSemana = (fecha: Date | undefined) => {
+  const { empresaActiva } = useEmpresa();
   const fechaValida = fecha || new Date();
   // Crear una clave única basada en el inicio de la semana (lunes)
   const semanaKey = format(startOfWeek(fechaValida, { weekStartsOn: 1 }), 'yyyy-MM-dd');
   
   return useQuery({
-    queryKey: [CITAS_QUERY_KEY, 'semana', semanaKey],
-    queryFn: () => getCitasPorSemana(fechaValida),
+    queryKey: [CITAS_QUERY_KEY, empresaActiva?.$id, 'semana', semanaKey],
+    queryFn: () => {
+      if (!empresaActiva) throw new Error('No hay empresa activa');
+      return getCitasPorSemana(empresaActiva.$id, fechaValida);
+    },
+    enabled: !!empresaActiva,
     staleTime: 1000 * 60 * 5, // Cache por 5 minutos
     refetchOnMount: true,
     refetchOnWindowFocus: true,
@@ -48,13 +59,18 @@ export const useGetCitasPorSemana = (fecha: Date | undefined) => {
 
 // --- HOOK PARA OBTENER TODAS LAS CITAS (PARA VALIDACIÓN DE CONFLICTOS) ---
 export const useGetCitas = (fecha?: Date) => {
+  const { empresaActiva } = useEmpresa();
   const fechaValida = fecha || new Date();
   // Crear una clave única basada en el inicio de la semana (lunes)
   const semanaKey = format(startOfWeek(fechaValida, { weekStartsOn: 1 }), 'yyyy-MM-dd');
   
   return useQuery({
-    queryKey: [CITAS_QUERY_KEY, 'todas', semanaKey],
-    queryFn: () => getCitasPorSemana(fechaValida),
+    queryKey: [CITAS_QUERY_KEY, empresaActiva?.$id, 'todas', semanaKey],
+    queryFn: () => {
+      if (!empresaActiva) throw new Error('No hay empresa activa');
+      return getCitasPorSemana(empresaActiva.$id, fechaValida);
+    },
+    enabled: !!empresaActiva,
     staleTime: 1000 * 60 * 5, // Cache por 5 minutos
     refetchOnMount: true,
     refetchOnWindowFocus: true,
@@ -63,10 +79,14 @@ export const useGetCitas = (fecha?: Date) => {
 
 // --- HOOK PARA CREAR UNA CITA ---
 export const useCreateCita = () => {
+  const { empresaActiva } = useEmpresa();
   const queryClient = useQueryClient();
   return useMutation({
     // La función que llama al servicio para crear la cita
-    mutationFn: (newCita: LipooutUserInput<CitaInput>) => createCita(newCita),
+    mutationFn: (newCita: LipooutUserInput<CitaInput>) => {
+      if (!empresaActiva) throw new Error('No hay empresa activa');
+      return createCita(empresaActiva.$id, newCita);
+    },
     
     // --- IMPORTANTE: Invalidar queries al tener éxito ---
     onSuccess: (/* data, variables */) => { // 'data' es la cita creada, 'variables' es lo que se envió
@@ -95,10 +115,13 @@ export const useCreateCita = () => {
 
 // --- HOOK PARA ACTUALIZAR UNA CITA ---
 export const useUpdateCita = () => {
+  const { empresaActiva } = useEmpresa();
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: LipooutUserInput<Partial<CitaInput>> }) =>
-      updateCita(id, data),
+    mutationFn: ({ id, data }: { id: string; data: LipooutUserInput<Partial<CitaInput>> }) => {
+      if (!empresaActiva) throw new Error('No hay empresa activa');
+      return updateCita(empresaActiva.$id, id, data);
+    },
     onSuccess: (/* data, variables */) => { // 'data' es la cita actualizada, 'variables' son {id, data}
       // Invalidar para refrescar la vista
       queryClient.invalidateQueries({ queryKey: [CITAS_QUERY_KEY] });
@@ -125,10 +148,14 @@ export const useUpdateCita = () => {
 
 // --- HOOK PARA ELIMINAR UNA CITA ---
 export const useDeleteCita = () => {
+  const { empresaActiva } = useEmpresa();
   const queryClient = useQueryClient();
   return useMutation({
     // Modificado para aceptar un objeto con id y opcionalmente fechaCita
-    mutationFn: ({ id/*, fechaCita */}: { id: string; fechaCita?: string }) => deleteCita(id),
+    mutationFn: ({ id/*, fechaCita */}: { id: string; fechaCita?: string }) => {
+      if (!empresaActiva) throw new Error('No hay empresa activa');
+      return deleteCita(empresaActiva.$id, id);
+    },
     onSuccess: () => { // El primer argumento es void (delete no devuelve datos)
       // Invalidar para refrescar la vista
       queryClient.invalidateQueries({ queryKey: [CITAS_QUERY_KEY] });

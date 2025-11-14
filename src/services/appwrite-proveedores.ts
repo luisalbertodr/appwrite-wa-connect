@@ -5,8 +5,11 @@ import { ID, Query, Models } from 'appwrite';
 export type CreateProveedorInput = LipooutUserInput<Proveedor>;
 export type UpdateProveedorInput = Partial<CreateProveedorInput>;
 
-export const getProveedores = async (soloActivos: boolean = true): Promise<(Proveedor & Models.Document)[]> => {
-  const queries = [Query.limit(100)];
+export const getProveedores = async (empresaId: string, soloActivos: boolean = true): Promise<(Proveedor & Models.Document)[]> => {
+  const queries = [
+    Query.equal('empresa_id', empresaId),
+    Query.limit(100)
+  ];
   if (soloActivos) {
     queries.push(Query.equal('activo', true));
   }
@@ -18,8 +21,11 @@ export const getProveedores = async (soloActivos: boolean = true): Promise<(Prov
   return response.documents;
 };
 
-export const createProveedor = (proveedorInput: CreateProveedorInput) => {
-  const proveedorToSave: any = { ...proveedorInput };
+export const createProveedor = (empresaId: string, proveedorInput: CreateProveedorInput) => {
+  const proveedorToSave: any = { 
+    ...proveedorInput,
+    empresa_id: empresaId
+  };
   
   // Limpiar campos undefined
   Object.keys(proveedorToSave).forEach(key => {
@@ -36,8 +42,11 @@ export const createProveedor = (proveedorInput: CreateProveedorInput) => {
   );
 };
 
-export const updateProveedor = (id: string, proveedorInput: UpdateProveedorInput) => {
-  const proveedorToUpdate: any = { ...proveedorInput };
+export const updateProveedor = (empresaId: string, id: string, proveedorInput: UpdateProveedorInput) => {
+  const proveedorToUpdate: any = { 
+    ...proveedorInput,
+    empresa_id: empresaId
+  };
   
   // Limpiar campos undefined
   Object.keys(proveedorToUpdate).forEach(key => {

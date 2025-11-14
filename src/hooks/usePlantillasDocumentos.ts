@@ -15,6 +15,7 @@ import {
   validarDatosPlantilla,
 } from '../services/appwrite-plantillas-documentos';
 import type { PlantillaDocumento, PlantillaDocumentoInput, TipoPlantilla } from '../types/plantilla-documento.types';
+import { useEmpresa } from '@/contexts/EmpresaContext';
 
 export interface PlantillasState {
   plantillas: PlantillaDocumento[];
@@ -24,6 +25,7 @@ export interface PlantillasState {
 }
 
 export function usePlantillasDocumentos() {
+  const { empresaActiva } = useEmpresa();
   const [state, setState] = useState<PlantillasState>({
     plantillas: [],
     plantillaActual: null,
@@ -33,9 +35,14 @@ export function usePlantillasDocumentos() {
 
   // Cargar todas las plantillas
   const loadPlantillas = useCallback(async (soloActivas: boolean = false) => {
+    if (!empresaActiva) {
+      setState(prev => ({ ...prev, error: 'No hay empresa activa' }));
+      return;
+    }
+
     setState(prev => ({ ...prev, loading: true, error: null }));
     try {
-      const plantillas = await getAllPlantillas(soloActivas);
+      const plantillas = await getAllPlantillas(empresaActiva.$id, soloActivas);
       setState({
         plantillas,
         plantillaActual: null,
@@ -49,13 +56,19 @@ export function usePlantillasDocumentos() {
         error: error instanceof Error ? error.message : 'Error al cargar plantillas',
       }));
     }
-  }, []);
+  }, [empresaActiva]);
 
   // Cargar plantilla por ID
   const loadPlantillaById = useCallback(async (id: string) => {
+    if (!empresaActiva) {
+      const error = new Error('No hay empresa activa');
+      setState(prev => ({ ...prev, error: error.message }));
+      throw error;
+    }
+
     setState(prev => ({ ...prev, loading: true, error: null }));
     try {
-      const plantilla = await getPlantillaById(id);
+      const plantilla = await getPlantillaById(empresaActiva.$id, id);
       setState(prev => ({
         ...prev,
         plantillaActual: plantilla,
@@ -71,13 +84,19 @@ export function usePlantillasDocumentos() {
       }));
       throw error;
     }
-  }, []);
+  }, [empresaActiva]);
 
   // Cargar plantillas por tipo
   const loadPlantillasByTipo = useCallback(async (tipo: TipoPlantilla) => {
+    if (!empresaActiva) {
+      const error = new Error('No hay empresa activa');
+      setState(prev => ({ ...prev, error: error.message }));
+      throw error;
+    }
+
     setState(prev => ({ ...prev, loading: true, error: null }));
     try {
-      const plantillas = await getPlantillasByTipo(tipo);
+      const plantillas = await getPlantillasByTipo(empresaActiva.$id, tipo);
       setState(prev => ({
         ...prev,
         plantillas,
@@ -93,13 +112,19 @@ export function usePlantillasDocumentos() {
       }));
       throw error;
     }
-  }, []);
+  }, [empresaActiva]);
 
   // Crear plantilla
   const createPlant = useCallback(async (plantilla: PlantillaDocumentoInput) => {
+    if (!empresaActiva) {
+      const error = new Error('No hay empresa activa');
+      setState(prev => ({ ...prev, error: error.message }));
+      throw error;
+    }
+
     setState(prev => ({ ...prev, loading: true, error: null }));
     try {
-      const nueva = await createPlantilla(plantilla);
+      const nueva = await createPlantilla(empresaActiva.$id, plantilla);
       setState(prev => ({
         plantillas: [...prev.plantillas, nueva],
         plantillaActual: nueva,
@@ -115,16 +140,22 @@ export function usePlantillasDocumentos() {
       }));
       throw error;
     }
-  }, []);
+  }, [empresaActiva]);
 
   // Actualizar plantilla
   const updatePlant = useCallback(async (
     id: string,
     plantilla: Partial<PlantillaDocumentoInput>
   ) => {
+    if (!empresaActiva) {
+      const error = new Error('No hay empresa activa');
+      setState(prev => ({ ...prev, error: error.message }));
+      throw error;
+    }
+
     setState(prev => ({ ...prev, loading: true, error: null }));
     try {
-      const actualizada = await updatePlantilla(id, plantilla);
+      const actualizada = await updatePlantilla(empresaActiva.$id, id, plantilla);
       setState(prev => ({
         plantillas: prev.plantillas.map(p =>
           p.$id === id ? actualizada : p
@@ -142,13 +173,19 @@ export function usePlantillasDocumentos() {
       }));
       throw error;
     }
-  }, []);
+  }, [empresaActiva]);
 
   // Desactivar plantilla
   const desactivar = useCallback(async (id: string) => {
+    if (!empresaActiva) {
+      const error = new Error('No hay empresa activa');
+      setState(prev => ({ ...prev, error: error.message }));
+      throw error;
+    }
+
     setState(prev => ({ ...prev, loading: true, error: null }));
     try {
-      const desactivada = await desactivarPlantilla(id);
+      const desactivada = await desactivarPlantilla(empresaActiva.$id, id);
       setState(prev => ({
         plantillas: prev.plantillas.map(p =>
           p.$id === id ? desactivada : p
@@ -166,13 +203,19 @@ export function usePlantillasDocumentos() {
       }));
       throw error;
     }
-  }, []);
+  }, [empresaActiva]);
 
   // Eliminar plantilla
   const deletePlant = useCallback(async (id: string) => {
+    if (!empresaActiva) {
+      const error = new Error('No hay empresa activa');
+      setState(prev => ({ ...prev, error: error.message }));
+      throw error;
+    }
+
     setState(prev => ({ ...prev, loading: true, error: null }));
     try {
-      await deletePlantilla(id);
+      await deletePlantilla(empresaActiva.$id, id);
       setState(prev => ({
         plantillas: prev.plantillas.filter(p => p.$id !== id),
         plantillaActual: prev.plantillaActual?.$id === id ? null : prev.plantillaActual,
@@ -187,7 +230,7 @@ export function usePlantillasDocumentos() {
       }));
       throw error;
     }
-  }, []);
+  }, [empresaActiva]);
 
   // Rellenar plantilla con datos
   const rellenar = useCallback((
@@ -207,11 +250,17 @@ export function usePlantillasDocumentos() {
     file: File,
     plantillaId: string
   ) => {
+    if (!empresaActiva) {
+      const error = new Error('No hay empresa activa');
+      setState(prev => ({ ...prev, error: error.message }));
+      throw error;
+    }
+
     setState(prev => ({ ...prev, loading: true, error: null }));
     try {
-      const archivoId = await uploadArchivoBasePlantilla(file, plantillaId);
+      const archivoId = await uploadArchivoBasePlantilla(empresaActiva.$id, file, plantillaId);
       // Recargar la plantilla actualizada
-      const actualizada = await getPlantillaById(plantillaId);
+      const actualizada = await getPlantillaById(empresaActiva.$id, plantillaId);
       setState(prev => ({
         plantillas: prev.plantillas.map(p =>
           p.$id === plantillaId ? actualizada : p
@@ -229,7 +278,7 @@ export function usePlantillasDocumentos() {
       }));
       throw error;
     }
-  }, []);
+  }, [empresaActiva]);
 
   // Obtener URL del archivo base
   const getUrlArchivoBase = useCallback((archivoId: string): string | null => {
@@ -246,9 +295,15 @@ export function usePlantillasDocumentos() {
     plantillaId: string,
     nuevoNombre?: string
   ) => {
+    if (!empresaActiva) {
+      const error = new Error('No hay empresa activa');
+      setState(prev => ({ ...prev, error: error.message }));
+      throw error;
+    }
+
     setState(prev => ({ ...prev, loading: true, error: null }));
     try {
-      const duplicada = await duplicarPlantilla(plantillaId, nuevoNombre);
+      const duplicada = await duplicarPlantilla(empresaActiva.$id, plantillaId, nuevoNombre);
       setState(prev => ({
         plantillas: [...prev.plantillas, duplicada],
         plantillaActual: duplicada,
@@ -264,7 +319,7 @@ export function usePlantillasDocumentos() {
       }));
       throw error;
     }
-  }, []);
+  }, [empresaActiva]);
 
   // Obtener campos requeridos
   const getCamposReq = useCallback((plantilla: PlantillaDocumento): any[] => {

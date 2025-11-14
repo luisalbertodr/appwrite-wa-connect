@@ -13,6 +13,7 @@ import {
 import type { Notificacion, FiltroNotificaciones } from '../types/notificacion.types';
 import { Models } from 'appwrite';
 import { databases, DATABASE_ID, NOTIFICACIONES_COLLECTION_ID } from '../lib/appwrite';
+import { useEmpresa } from '@/contexts/EmpresaContext';
 
 export interface NotificacionesState {
   notificaciones: (Notificacion & Models.Document)[];
@@ -22,6 +23,8 @@ export interface NotificacionesState {
 }
 
 export function useNotificaciones(empleadoId?: string) {
+  const { empresaActiva } = useEmpresa();
+  
   const [state, setState] = useState<NotificacionesState>({
     notificaciones: [],
     noLeidas: [],
@@ -31,13 +34,14 @@ export function useNotificaciones(empleadoId?: string) {
 
   // Cargar notificaciones del empleado
   const loadNotificaciones = useCallback(async (empId?: string, filtros?: FiltroNotificaciones) => {
+    if (!empresaActiva) return;
     const targetId = empId || empleadoId;
     if (!targetId) return;
 
     setState(prev => ({ ...prev, loading: true, error: null }));
     try {
-      const notifs = await getNotificacionesByEmpleado(targetId, filtros);
-      const noLeidas = await getNotificacionesNoLeidas(targetId);
+      const notifs = await getNotificacionesByEmpleado(empresaActiva.$id, targetId, filtros);
+      const noLeidas = await getNotificacionesNoLeidas(empresaActiva.$id, targetId);
       setState({
         notificaciones: notifs,
         noLeidas,
@@ -51,20 +55,21 @@ export function useNotificaciones(empleadoId?: string) {
         error: error instanceof Error ? error.message : 'Error al cargar notificaciones',
       }));
     }
-  }, [empleadoId]);
+  }, [empresaActiva, empleadoId]);
 
   // Cargar notificaciones por tipo
   const loadNotificacionesPorTipo = useCallback(async (
     tipo: Notificacion['tipo'],
     empId?: string
   ) => {
+    if (!empresaActiva) return;
     const targetId = empId || empleadoId;
     if (!targetId) return;
 
     setState(prev => ({ ...prev, loading: true, error: null }));
     try {
-      const notifs = await getNotificacionesByEmpleado(targetId, { tipo });
-      const noLeidas = await getNotificacionesNoLeidas(targetId);
+      const notifs = await getNotificacionesByEmpleado(empresaActiva.$id, targetId, { tipo });
+      const noLeidas = await getNotificacionesNoLeidas(empresaActiva.$id, targetId);
       setState({
         notificaciones: notifs,
         noLeidas,
@@ -78,15 +83,17 @@ export function useNotificaciones(empleadoId?: string) {
         error: error instanceof Error ? error.message : 'Error al cargar notificaciones',
       }));
     }
-  }, [empleadoId]);
+  }, [empresaActiva, empleadoId]);
 
   // Crear notificación
   const createNotif = useCallback(async (
     notificacion: Omit<Notificacion, '$id' | '$createdAt' | '$updatedAt' | '$collectionId' | '$databaseId' | '$permissions'>
   ) => {
+    if (!empresaActiva) throw new Error('No hay empresa activa');
+    
     setState(prev => ({ ...prev, loading: true, error: null }));
     try {
-      const nuevaNotif = await createNotificacion(notificacion);
+      const nuevaNotif = await createNotificacion(empresaActiva.$id, notificacion);
       setState(prev => ({
         notificaciones: [nuevaNotif, ...prev.notificaciones],
         noLeidas: [nuevaNotif, ...prev.noLeidas], // Las nuevas notificaciones siempre son no leídas
@@ -102,7 +109,7 @@ export function useNotificaciones(empleadoId?: string) {
       }));
       throw error;
     }
-  }, []);
+  }, [empresaActiva]);
 
   // Actualizar notificación
   const updateNotif = useCallback(async (
@@ -140,12 +147,13 @@ export function useNotificaciones(empleadoId?: string) {
 
   // Marcar como leída
   const marcarLeida = useCallback(async (id: string, empId?: string) => {
+    if (!empresaActiva) return;
     const targetId = empId || empleadoId;
     if (!targetId) return;
 
     setState(prev => ({ ...prev, loading: true, error: null }));
     try {
-      const actualizada = await marcarComoLeida(id, targetId);
+      const actualizada = await marcarComoLeida(empresaActiva.$id, id, targetId);
       setState(prev => ({
         notificaciones: prev.notificaciones.map(n =>
           n.$id === id ? actualizada : n
@@ -163,16 +171,17 @@ export function useNotificaciones(empleadoId?: string) {
       }));
       throw error;
     }
-  }, [empleadoId]);
+  }, [empresaActiva, empleadoId]);
 
   // Marcar todas como leídas
   const marcarTodasLeidas = useCallback(async (empId?: string) => {
+    if (!empresaActiva) return;
     const targetId = empId || empleadoId;
     if (!targetId) return;
 
     setState(prev => ({ ...prev, loading: true, error: null }));
     try {
-      const count = await marcarTodasComoLeidas(targetId);
+      const count = await marcarTodasComoLeidas(empresaActiva.$id, targetId);
       setState(prev => ({
         notificaciones: prev.notificaciones,
         noLeidas: [],
@@ -188,13 +197,15 @@ export function useNotificaciones(empleadoId?: string) {
       }));
       throw error;
     }
-  }, [empleadoId]);
+  }, [empresaActiva, empleadoId]);
 
   // Desactivar notificación
   const desactivar = useCallback(async (id: string) => {
+    if (!empresaActiva) return;
+    
     setState(prev => ({ ...prev, loading: true, error: null }));
     try {
-      await desactivarNotificacion(id);
+      await desactivarNotificacion(empresaActiva.$id, id);
       setState(prev => ({
         notificaciones: prev.notificaciones.map(n =>
           n.$id === id ? { ...n, activa: false } : n
@@ -211,13 +222,15 @@ export function useNotificaciones(empleadoId?: string) {
       }));
       throw error;
     }
-  }, []);
+  }, [empresaActiva]);
 
   // Eliminar notificación
   const deleteNotif = useCallback(async (id: string) => {
+    if (!empresaActiva) return;
+    
     setState(prev => ({ ...prev, loading: true, error: null }));
     try {
-      await deleteNotificacion(id);
+      await deleteNotificacion(empresaActiva.$id, id);
       setState(prev => ({
         notificaciones: prev.notificaciones.filter(n => n.$id !== id),
         noLeidas: prev.noLeidas.filter(n => n.$id !== id),
@@ -232,13 +245,15 @@ export function useNotificaciones(empleadoId?: string) {
       }));
       throw error;
     }
-  }, []);
+  }, [empresaActiva]);
 
   // Eliminar notificaciones antiguas
   const eliminarAntiguas = useCallback(async (diasAntiguedad: number = 30) => {
+    if (!empresaActiva) return;
+    
     setState(prev => ({ ...prev, loading: true, error: null }));
     try {
-      const count = await limpiarNotificacionesAntiguas(diasAntiguedad);
+      const count = await limpiarNotificacionesAntiguas(empresaActiva.$id, diasAntiguedad);
       // Recargar notificaciones después de eliminar
       if (empleadoId) {
         await loadNotificaciones(empleadoId);
@@ -252,29 +267,31 @@ export function useNotificaciones(empleadoId?: string) {
       }));
       throw error;
     }
-  }, [empleadoId, loadNotificaciones]);
+  }, [empresaActiva, empleadoId, loadNotificaciones]);
 
   // Contar no leídas
   const contarNoLeidas = useCallback(async (empId?: string) => {
+    if (!empresaActiva) return 0;
     const targetId = empId || empleadoId;
     if (!targetId) return 0;
 
     try {
-      return await contarNotificacionesNoLeidas(targetId);
+      return await contarNotificacionesNoLeidas(empresaActiva.$id, targetId);
     } catch (error) {
       console.error('Error al contar notificaciones:', error);
       return 0;
     }
-  }, [empleadoId]);
+  }, [empresaActiva, empleadoId]);
 
   // Obtener estadísticas
   const getEstadisticas = useCallback(async (empId?: string) => {
+    if (!empresaActiva) return null;
     const targetId = empId || empleadoId;
     if (!targetId) return null;
 
     try {
-      const todas = await getNotificacionesByEmpleado(targetId);
-      const noLeidas = await getNotificacionesNoLeidas(targetId);
+      const todas = await getNotificacionesByEmpleado(empresaActiva.$id, targetId);
+      const noLeidas = await getNotificacionesNoLeidas(empresaActiva.$id, targetId);
       
       const porTipo = todas.reduce((acc, notif) => {
         acc[notif.tipo] = (acc[notif.tipo] || 0) + 1;
@@ -296,14 +313,14 @@ export function useNotificaciones(empleadoId?: string) {
       console.error('Error al obtener estadísticas:', error);
       return null;
     }
-  }, [empleadoId]);
+  }, [empresaActiva, empleadoId]);
 
-  // Auto-cargar al montar o cambiar empleadoId
+  // Auto-cargar al montar o cambiar empleadoId o empresa
   useEffect(() => {
-    if (empleadoId) {
+    if (empleadoId && empresaActiva) {
       loadNotificaciones(empleadoId);
     }
-  }, [empleadoId, loadNotificaciones]);
+  }, [empleadoId, empresaActiva, loadNotificaciones]);
 
   return {
     notificaciones: state.notificaciones,

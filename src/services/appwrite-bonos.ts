@@ -2,11 +2,6 @@ import { databases, DATABASE_ID, BONOS_CLIENTE_COLLECTION_ID } from '@/lib/appwr
 import { BonoCliente, ComposicionBono, LipooutUserInput } from '@/types';
 import { ID, Query, Models } from 'appwrite';
 
-// =========================================================================
-// CAMBIO MULTIEMPRESA: OBTENER CONTEXTO DE EMPRESA
-// =========================================================================
-const getEmpresaActualId = () => "ID_EMPRESA_ACTUAL_PLACEHOLDER"; 
-
 // Tipos Input (sin empresa_id, se inyecta en el servicio)
 export type CreateBonoClienteInput = Omit<LipooutUserInput<BonoCliente>, 'empresa_id'>;
 export type UpdateBonoClienteInput = Partial<CreateBonoClienteInput>;
@@ -14,14 +9,12 @@ export type UpdateBonoClienteInput = Partial<CreateBonoClienteInput>;
 // --- Funciones de Servicio ---
 
 // OBTENER bonos por cliente
-export const getBonosByCliente = async (clienteId: string): Promise<(BonoCliente & Models.Document)[]> => {
-  const empresaId = getEmpresaActualId();
-  
+export const getBonosByCliente = async (empresaId: string, clienteId: string): Promise<(BonoCliente & Models.Document)[]> => {
   const response = await databases.listDocuments<BonoCliente & Models.Document>(
     DATABASE_ID,
     BONOS_CLIENTE_COLLECTION_ID,
     [
-      Query.equal('empresa_id', empresaId), // FILTRO MULTIEMPRESA (Ahora compatible con el tipo)
+      Query.equal('empresa_id', empresaId),
       Query.equal('cliente_id', clienteId),
       Query.orderDesc('fecha_compra'),
       Query.limit(100)
@@ -31,15 +24,14 @@ export const getBonosByCliente = async (clienteId: string): Promise<(BonoCliente
 };
 
 // OBTENER bonos disponibles (activos, no expirados, con usos restantes)
-export const getBonosDisponibles = async (clienteId: string): Promise<(BonoCliente & Models.Document)[]> => {
-  const empresaId = getEmpresaActualId();
+export const getBonosDisponibles = async (empresaId: string, clienteId: string): Promise<(BonoCliente & Models.Document)[]> => {
   const now = new Date().toISOString();
   
   const response = await databases.listDocuments<BonoCliente & Models.Document>(
     DATABASE_ID,
     BONOS_CLIENTE_COLLECTION_ID,
     [
-      Query.equal('empresa_id', empresaId), // FILTRO MULTIEMPRESA
+      Query.equal('empresa_id', empresaId),
       Query.equal('cliente_id', clienteId),
       Query.equal('activo', true),
       Query.greaterThan('usos_restantes', 0),
@@ -56,11 +48,11 @@ export const getBonosDisponibles = async (clienteId: string): Promise<(BonoClien
 
 // OBTENER bonos disponibles para un artículo específico
 export const getBonosDisponiblesParaArticulo = async (
+  empresaId: string,
   clienteId: string, 
   articuloId: string
 ): Promise<(BonoCliente & Models.Document)[]> => {
-  // getBonosDisponibles ya incluye el filtro de empresa_id
-  const bonosDisponibles = await getBonosDisponibles(clienteId);
+  const bonosDisponibles = await getBonosDisponibles(empresaId, clienteId);
   
   // Filtrar bonos que contienen el artículo en su composición restante
   return bonosDisponibles.filter(bono => {
@@ -77,18 +69,16 @@ export const getBonosDisponiblesParaArticulo = async (
 
 // VERIFICAR si un artículo está disponible en algún bono
 export const verificarArticuloEnBonos = async (
+  empresaId: string,
   clienteId: string,
   articuloId: string
 ): Promise<boolean> => {
-  const bonos = await getBonosDisponiblesParaArticulo(clienteId, articuloId);
+  const bonos = await getBonosDisponiblesParaArticulo(empresaId, clienteId, articuloId);
   return bonos.length > 0;
 };
 
 // CREAR bono
-export const createBonoCliente = (newBono: CreateBonoClienteInput) => {
-  const empresaId = getEmpresaActualId();
-  
-  // Corrección 2353: Ahora newBono acepta la inyección de empresa_id
+export const createBonoCliente = (empresaId: string, newBono: CreateBonoClienteInput) => {
   return databases.createDocument<BonoCliente & Models.Document>(
     DATABASE_ID,
     BONOS_CLIENTE_COLLECTION_ID,
@@ -98,10 +88,7 @@ export const createBonoCliente = (newBono: CreateBonoClienteInput) => {
 };
 
 // ACTUALIZAR bono
-export const updateBonoCliente = ({ $id, data }: { $id: string, data: UpdateBonoClienteInput }) => {
-  const empresaId = getEmpresaActualId();
-  
-  // Corrección 2353: Ahora data acepta la inyección de empresa_id
+export const updateBonoCliente = (empresaId: string, { $id, data }: { $id: string, data: UpdateBonoClienteInput }) => {
   return databases.updateDocument<BonoCliente & Models.Document>(
     DATABASE_ID,
     BONOS_CLIENTE_COLLECTION_ID,
@@ -112,12 +99,11 @@ export const updateBonoCliente = ({ $id, data }: { $id: string, data: UpdateBono
 
 // CONSUMIR bono (decrementar cantidad de un artículo) - Con chequeo de seguridad
 export const consumirBono = async (
+  empresaId: string,
   bonoId: string,
   articuloId: string,
   cantidadConsumida: number
 ): Promise<BonoCliente & Models.Document> => {
-  const empresaId = getEmpresaActualId();
-    
   // Obtener el bono actual
   const bono = await databases.getDocument<BonoCliente & Models.Document>(
     DATABASE_ID,
@@ -126,11 +112,9 @@ export const consumirBono = async (
   );
   
   // COMPROBACIÓN DE SEGURIDAD: El bono debe pertenecer a la empresa activa.
-  // Corrección 2339: bono.empresa_id ahora existe en el tipo.
   if (bono.empresa_id !== empresaId) { 
       throw new Error("Acceso denegado: El bono no pertenece a la empresa activa.");
   }
-
 
   // Parsear composición restante
   const composicionRestante: ComposicionBono[] = JSON.parse(bono.composicion_restante);
@@ -174,19 +158,18 @@ export const consumirBono = async (
 
 // VERIFICAR bonos expirados o por expirar
 export const verificarExpiracionBonos = async (
+  empresaId: string,
   clienteId?: string,
   diasAnticipacion: number = 7
 ): Promise<{
   expirados: (BonoCliente & Models.Document)[];
   porExpirar: (BonoCliente & Models.Document)[];
 }> => {
-  const empresaId = getEmpresaActualId(); // OBTENER EMPRESA ID
-    
   const now = new Date();
   const fechaLimite = new Date(now.getTime() + diasAnticipacion * 24 * 60 * 60 * 1000);
   
   const queries = [
-    Query.equal('empresa_id', empresaId), // FILTRO
+    Query.equal('empresa_id', empresaId),
     Query.equal('activo', true),
     Query.greaterThan('usos_restantes', 0),
     Query.isNotNull('fecha_vencimiento'),
@@ -221,9 +204,8 @@ export const verificarExpiracionBonos = async (
 };
 
 // DESACTIVAR bonos expirados
-export const desactivarBonosExpirados = async (): Promise<number> => {
-  // getBonosByCliente ya filtra por empresa_id
-  const { expirados } = await verificarExpiracionBonos();
+export const desactivarBonosExpirados = async (empresaId: string): Promise<number> => {
+  const { expirados } = await verificarExpiracionBonos(empresaId);
   
   let contador = 0;
   for (const bono of expirados) {
@@ -249,9 +231,8 @@ export const deleteBonoCliente = (bonoId: string) => {
 };
 
 // OBTENER estadísticas de bonos de un cliente
-export const getEstadisticasBonos = async (clienteId: string) => {
-  // getBonosByCliente ya filtra por empresa_id
-  const bonos = await getBonosByCliente(clienteId);
+export const getEstadisticasBonos = async (empresaId: string, clienteId: string) => {
+  const bonos = await getBonosByCliente(empresaId, clienteId);
   
   const activos = bonos.filter(b => b.activo && b.usos_restantes > 0);
   const usados = bonos.filter(b => !b.activo || b.usos_restantes === 0);
